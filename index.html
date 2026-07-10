@@ -1,0 +1,1604 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="写真帳">
+<meta name="theme-color" content="#1a2744">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<title>写真帳</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Serif+Display&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy: #1a2744;
+    --navy-light: #243460;
+    --blue: #2e6fad;
+    --blue-light: #4a90d9;
+    --accent: #e8a020;
+    --bg: #f4f6fb;
+    --white: #ffffff;
+    --text: #1a2744;
+    --text-sub: #6b7a99;
+    --border: #dde3f0;
+    --card: #ffffff;
+    --shadow: 0 2px 16px rgba(26,39,68,0.10);
+    --radius: 14px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    font-family: 'Noto Sans JP', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ===== HEADER ===== */
+  .app-header {
+    background: var(--navy);
+    color: white;
+    padding: 16px 20px 12px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 12px rgba(26,39,68,0.25);
+  }
+  .header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .app-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 22px;
+    letter-spacing: 0.04em;
+    color: white;
+  }
+  .app-title span { color: var(--accent); }
+  .header-actions { display: flex; gap: 10px; }
+  .btn-icon {
+    background: rgba(255,255,255,0.12);
+    border: none;
+    border-radius: 10px;
+    color: white;
+    padding: 8px 12px;
+    font-size: 13px;
+    cursor: pointer;
+    font-family: 'Noto Sans JP', sans-serif;
+    transition: background 0.2s;
+    white-space: nowrap;
+  }
+  .btn-icon:active { background: rgba(255,255,255,0.22); }
+  .btn-icon.accent { background: var(--accent); color: var(--navy); font-weight: 700; }
+
+  /* ===== SCREENS ===== */
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  /* ===== HOME SCREEN ===== */
+  .home-pad { padding: 20px 16px 100px; }
+  .section-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: var(--text-sub);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  .project-card {
+    background: var(--card);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 16px 18px;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+    border: 1.5px solid var(--border);
+  }
+  .project-card:active { transform: scale(0.98); box-shadow: none; }
+  .project-icon {
+    width: 46px; height: 46px;
+    background: linear-gradient(135deg, var(--navy) 0%, var(--blue) 100%);
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; flex-shrink: 0;
+  }
+  .project-info { flex: 1; min-width: 0; }
+  .project-name {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .project-meta {
+    font-size: 12px;
+    color: var(--text-sub);
+    margin-top: 3px;
+  }
+  .project-badge {
+    background: var(--blue-light);
+    color: white;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 20px;
+    flex-shrink: 0;
+  }
+  .project-arrow { color: var(--border); font-size: 18px; flex-shrink: 0; }
+
+  .btn-add-project {
+    width: 100%;
+    background: var(--navy);
+    color: white;
+    border: none;
+    border-radius: var(--radius);
+    padding: 16px;
+    font-size: 15px;
+    font-weight: 700;
+    font-family: 'Noto Sans JP', sans-serif;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    margin-top: 6px;
+    transition: background 0.2s;
+  }
+  .btn-add-project:active { background: var(--navy-light); }
+
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-sub);
+  }
+  .empty-state .icon { font-size: 56px; margin-bottom: 16px; }
+  .empty-state p { font-size: 14px; line-height: 1.8; }
+
+  /* ===== PHOTO BOOK SCREEN ===== */
+  .photobook-header {
+    background: var(--navy);
+    color: white;
+    padding: 12px 16px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .btn-back {
+    background: rgba(255,255,255,0.12);
+    border: none; border-radius: 9px;
+    color: white; padding: 8px 12px;
+    font-size: 14px; cursor: pointer;
+    font-family: 'Noto Sans JP', sans-serif;
+  }
+  .photobook-title { font-size: 15px; font-weight: 700; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  .photobook-pad { padding: 16px 14px 100px; }
+
+  /* ===== PHOTO SLOT ===== */
+  .photo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  .photo-slot {
+    background: var(--card);
+    border-radius: var(--radius);
+    border: 2px dashed var(--border);
+    overflow: hidden;
+    box-shadow: var(--shadow);
+    transition: border-color 0.2s;
+  }
+  .photo-slot.has-photo { border-style: solid; border-color: var(--blue-light); }
+
+  .photo-area {
+    width: 100%; aspect-ratio: 4/3;
+    background: var(--bg);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; position: relative; overflow: hidden;
+  }
+  .photo-area img {
+    width: 100%; height: 100%; object-fit: cover;
+    display: block;
+  }
+  .photo-placeholder {
+    text-align: center; color: var(--text-sub);
+    pointer-events: none;
+  }
+  .photo-placeholder .ph-icon { font-size: 32px; margin-bottom: 6px; }
+  .photo-placeholder .ph-text { font-size: 11px; font-weight: 500; }
+
+  .photo-overlay {
+    position: absolute; bottom: 0; right: 0;
+    background: rgba(26,39,68,0.7);
+    color: white; font-size: 11px; padding: 4px 8px;
+    border-radius: 8px 0 0 0;
+    display: none;
+  }
+  .photo-slot.has-photo .photo-overlay { display: block; }
+
+  .photo-info {
+    padding: 10px 12px 12px;
+    border-top: 1px solid var(--border);
+  }
+  .info-row { margin-bottom: 8px; }
+  .info-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--text-sub);
+    text-transform: uppercase;
+    margin-bottom: 3px;
+  }
+  .info-value {
+    font-size: 12px;
+    color: var(--text);
+    font-weight: 500;
+  }
+  .info-input {
+    width: 100%;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 9px;
+    font-size: 12px;
+    font-family: 'Noto Sans JP', sans-serif;
+    color: var(--text);
+    background: var(--bg);
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .info-input:focus { border-color: var(--blue-light); background: white; }
+
+  .btn-camera {
+    width: 100%;
+    background: var(--bg);
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    padding: 8px;
+    font-size: 12px;
+    color: var(--text-sub);
+    font-family: 'Noto Sans JP', sans-serif;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    margin-bottom: 8px;
+    transition: all 0.2s;
+  }
+  .btn-camera:active { background: var(--border); }
+
+  /* ===== BOTTOM TOOLBAR ===== */
+  .bottom-bar {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: white;
+    border-top: 1px solid var(--border);
+    padding: 12px 16px;
+    display: flex; gap: 10px;
+    box-shadow: 0 -2px 12px rgba(26,39,68,0.08);
+    z-index: 100;
+  }
+  .btn-primary {
+    flex: 1;
+    background: var(--navy);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    padding: 14px;
+    font-size: 14px;
+    font-weight: 700;
+    font-family: 'Noto Sans JP', sans-serif;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .btn-primary:active { background: var(--navy-light); }
+  .btn-secondary {
+    flex: 1;
+    background: var(--bg);
+    color: var(--text);
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    padding: 14px;
+    font-size: 14px;
+    font-weight: 500;
+    font-family: 'Noto Sans JP', sans-serif;
+    cursor: pointer;
+  }
+  .btn-secondary:active { background: var(--border); }
+
+  /* ===== MODAL ===== */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.5); backdrop-filter: blur(4px);
+    z-index: 200; align-items: flex-end; justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: white;
+    border-radius: 20px 20px 0 0;
+    padding: 24px 20px 40px;
+    width: 100%; max-width: 500px;
+    animation: slideUp 0.25s ease;
+  }
+  @keyframes slideUp {
+    from { transform: translateY(60px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+  .modal-title {
+    font-size: 17px; font-weight: 700;
+    margin-bottom: 20px; text-align: center;
+    color: var(--text);
+  }
+  .modal-field { margin-bottom: 16px; }
+  .modal-label {
+    font-size: 12px; font-weight: 700;
+    color: var(--text-sub); margin-bottom: 6px;
+    letter-spacing: 0.06em;
+  }
+  .modal-input {
+    width: 100%;
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-size: 15px;
+    font-family: 'Noto Sans JP', sans-serif;
+    color: var(--text);
+    outline: none;
+  }
+  .modal-input:focus { border-color: var(--blue-light); }
+  .modal-select {
+    width: 100%;
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-size: 15px;
+    font-family: 'Noto Sans JP', sans-serif;
+    color: var(--text);
+    background: white;
+    outline: none;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236b7a99' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    padding-right: 36px;
+  }
+  .modal-btns { display: flex; gap: 10px; margin-top: 24px; }
+  .modal-btn-cancel {
+    flex: 1; background: var(--bg);
+    border: 1.5px solid var(--border);
+    border-radius: 12px; padding: 14px;
+    font-size: 14px; font-family: 'Noto Sans JP', sans-serif;
+    cursor: pointer; color: var(--text);
+  }
+  .modal-btn-ok {
+    flex: 2; background: var(--navy);
+    border: none; border-radius: 12px;
+    padding: 14px; font-size: 14px;
+    font-weight: 700; font-family: 'Noto Sans JP', sans-serif;
+    color: white; cursor: pointer;
+  }
+
+  /* ===== PRINT STYLES ===== */
+  @media print {
+    @page {
+      size: A4 landscape;
+      margin: 0;
+    }
+
+    html, body { margin: 0; padding: 0; background: white; }
+
+    /* print-area以外を完全非表示 */
+    body > *:not(#print-area) { display: none !important; }
+    #print-area {
+      display: block !important;
+      box-sizing: border-box;
+    }
+
+    .print-slot {
+      display: flex !important;
+      flex-direction: row;
+      border: 0.5mm solid #999;
+      overflow: hidden;
+      height: 100%;
+    }
+    .print-slot-photo {
+      width: 55%;
+      flex-shrink: 0;
+      background: white;
+      overflow: hidden;
+      border-right: 0.5mm solid #999;
+    }
+    .print-slot-photo img {
+      width: 100%; height: 100%;
+      object-fit: contain;
+      object-position: center;
+      display: block;
+      background: white;
+    }
+    .print-slot-photo-empty {
+      width: 100%; height: 100%;
+      display: flex; align-items: center; justify-content: center;
+      color: #bbb; font-size: 10pt;
+    }
+    .print-slot-info {
+      width: 45%;
+      padding: 3mm 4mm;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 2mm;
+      overflow: hidden;
+    }
+    .print-slot-info-row { display: flex; flex-direction: column; }
+    .print-slot-info-label {
+      font-size: 6pt;
+      color: #888;
+      font-weight: bold;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.5mm;
+    }
+    .print-slot-info-value {
+      font-size: 9pt;
+      color: #1a2744;
+      font-weight: 500;
+      border-bottom: 0.3mm solid #ddd;
+      padding-bottom: 1mm;
+      min-height: 4mm;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+  }
+  .print-slot { display: none; }
+
+  /* ===== PHOTO SOURCE CHOICE ===== */
+  .source-btns { display: flex; flex-direction: column; gap: 12px; margin-top: 8px; }
+  .source-btn {
+    display: flex; align-items: center; gap: 14px;
+    background: var(--bg);
+    border: 1.5px solid var(--border);
+    border-radius: 12px; padding: 16px 18px;
+    cursor: pointer; font-family: 'Noto Sans JP', sans-serif;
+    transition: all 0.18s;
+  }
+  .source-btn:active { background: #e0e8f5; border-color: var(--blue-light); }
+  .source-btn-icon { font-size: 28px; }
+  .source-btn-text { text-align: left; }
+  .source-btn-text strong { display: block; font-size: 15px; color: var(--text); }
+  .source-btn-text span { font-size: 12px; color: var(--text-sub); }
+
+  input[type=file] { display: none; }
+
+  /* ===== DELETE MODE ===== */
+  .slot-check {
+    display: none;
+    position: absolute; top: 8px; left: 8px;
+    width: 26px; height: 26px;
+    background: white;
+    border: 2px solid var(--border);
+    border-radius: 50%;
+    align-items: center; justify-content: center;
+    font-size: 14px;
+    z-index: 10;
+    pointer-events: none;
+    transition: all 0.15s;
+  }
+  body.delete-mode .slot-check { display: flex; }
+  body.delete-mode .photo-slot { cursor: pointer; position: relative; }
+  body.delete-mode .photo-slot.selected { border-color: #c0392b !important; border-style: solid !important; }
+  body.delete-mode .photo-slot.selected .slot-check {
+    background: #c0392b; border-color: #c0392b; color: white;
+  }
+  body.delete-mode .photo-area { pointer-events: none; }
+  .btn-delete-mode {
+    flex: 1; background: var(--bg);
+    color: var(--text);
+    border: 1.5px solid var(--border);
+    border-radius: 12px; padding: 14px;
+    font-size: 14px; font-weight: 500;
+    font-family: 'Noto Sans JP', sans-serif;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .btn-delete-mode.active {
+    background: #fff0f0; color: #c0392b;
+    border-color: #f5c6c6; font-weight: 700;
+  }
+  .btn-delete-mode:active { background: var(--border); }
+  .delete-bar {
+    display: none; position: fixed; bottom: 0; left: 0; right: 0;
+    background: white; border-top: 1px solid var(--border);
+    padding: 12px 16px; gap: 10px;
+    box-shadow: 0 -2px 12px rgba(26,39,68,0.08);
+    z-index: 100;
+  }
+  body.delete-mode .delete-bar { display: flex; }
+  body.delete-mode .normal-bar { display: none; }
+  .btn-exec-delete {
+    flex: 2; background: #c0392b; color: white;
+    border: none; border-radius: 12px; padding: 14px;
+    font-size: 14px; font-weight: 700;
+    font-family: 'Noto Sans JP', sans-serif; cursor: pointer;
+  }
+  .btn-exec-delete:disabled { background: #e0a0a0; cursor: default; }
+  .btn-cancel-delete {
+    flex: 1; background: var(--bg); color: var(--text);
+    border: 1.5px solid var(--border); border-radius: 12px; padding: 14px;
+    font-size: 14px; font-family: 'Noto Sans JP', sans-serif; cursor: pointer;
+  }
+
+  .btn-template-action {
+    flex: 1;
+    background: var(--card);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 8px;
+    font-size: 12px;
+    font-weight: 700;
+    font-family: 'Noto Sans JP', sans-serif;
+    color: var(--navy);
+    cursor: pointer;
+    box-shadow: var(--shadow);
+    transition: all 0.15s;
+    line-height: 1.5;
+  }
+  .btn-template-action:active { background: var(--bg); }
+
+  .template-card {
+    background: var(--card);
+    border-radius: var(--radius);
+    border: 1.5px solid var(--border);
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: var(--shadow);
+  }
+  .template-card-info { flex: 1; min-width: 0; }
+  .template-card-name { font-size: 14px; font-weight: 700; color: var(--text); }
+  .template-card-meta { font-size: 11px; color: var(--text-sub); margin-top: 3px; }
+  .template-card-btns { display: flex; gap: 6px; flex-shrink: 0; }
+  .tpl-btn {
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 8px; padding: 5px 10px;
+    font-size: 11px; font-family: 'Noto Sans JP', sans-serif;
+    color: var(--text-sub); cursor: pointer;
+  }
+  .tpl-btn.danger { color: #c0392b; border-color: #fad4d4; }
+  .tpl-btn:active { background: var(--border); }
+
+  .save-option {
+    display: flex; align-items: center; gap: 14px;
+    background: var(--bg); border: 1.5px solid var(--border);
+    border-radius: 12px; padding: 16px 18px;
+    cursor: pointer; margin-bottom: 10px;
+    transition: all 0.18s;
+  }
+  .save-option:active { background: #e0e8f5; border-color: var(--blue-light); }
+  .save-option-icon { font-size: 26px; flex-shrink: 0; }
+  .save-option-text strong { display: block; font-size: 14px; color: var(--text); }
+  .save-option-text span { font-size: 12px; color: var(--text-sub); }
+
+  .file-list-item {
+    display: flex; align-items: center; gap: 12px;
+    background: var(--bg); border: 1.5px solid var(--border);
+    border-radius: 12px; padding: 14px 16px;
+    margin-bottom: 8px; cursor: pointer;
+    transition: all 0.15s;
+  }
+  .file-list-item:active { background: #e0e8f5; border-color: var(--blue-light); }
+  .file-list-item-name { font-size: 14px; font-weight: 600; color: var(--text); flex: 1; }
+  .file-list-item-meta { font-size: 11px; color: var(--text-sub); }
+    position: fixed; top: 80px; left: 50%; transform: translateX(-50%);
+    background: var(--navy); color: white;
+    padding: 10px 22px; border-radius: 30px;
+    font-size: 13px; font-weight: 500;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+    z-index: 999; opacity: 0; transition: opacity 0.3s;
+    white-space: nowrap;
+  }
+  .blank-toggle {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 12px;
+    background: var(--bg);
+    border-top: 1px solid var(--border);
+    cursor: pointer;
+    user-select: none;
+  }
+  .blank-toggle-label { font-size: 11px; color: var(--text-sub); font-weight: 500; }
+  .blank-toggle input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--navy); cursor: pointer; }
+  .photo-slot.blank-mode { opacity: 0.4; }
+  .photo-slot.blank-mode .photo-area,
+  .photo-slot.blank-mode .photo-info { pointer-events: none; }
+
+  /* ホーム画面削除モード */
+  body.home-delete-mode .project-card { position: relative; }
+  .project-check {
+    display: none;
+    width: 26px; height: 26px;
+    background: white;
+    border: 2px solid var(--border);
+    border-radius: 50%;
+    align-items: center; justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+  body.home-delete-mode .project-check { display: flex; }
+  body.home-delete-mode .project-card.selected { border-color: #c0392b; }
+  body.home-delete-mode .project-card.selected .project-check {
+    background: #c0392b; border-color: #c0392b; color: white;
+  }
+  body.home-delete-mode #home-delete-bar { display: flex !important; }
+
+  .toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<!-- ===== TOAST ===== -->
+<div class="toast" id="toast"></div>
+
+<!-- ===== HOME SCREEN ===== -->
+<div class="screen active" id="screen-home">
+  <div class="app-header">
+    <div class="header-row">
+      <div class="app-title">📷 写真<span>帳</span></div>
+      <div class="header-actions">
+        <button class="btn-icon" onclick="showAddProject()">＋ 工事追加</button>
+      </div>
+    </div>
+  </div>
+  <div class="home-pad">
+    <div class="section-label" style="margin-bottom:10px;">テンプレート</div>
+    <div style="display:flex;gap:10px;margin-bottom:20px;">
+      <button class="btn-template-action" onclick="showTemplateSelect()">📋 テンプレートから作成</button>
+      <button class="btn-template-action" onclick="showTemplateManager()">✏️ テンプレート編集</button>
+    </div>
+    <div class="section-label" style="margin-bottom:14px;">工事一覧</div>
+    <div id="project-list"></div>
+    <div id="empty-state" class="empty-state" style="display:none;">
+      <div class="icon">🏗️</div>
+      <p>工事がまだ登録されていません<br>「＋ 工事追加」から始めましょう</p>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:6px;">
+      <button class="btn-add-project" style="flex:2;margin-top:0;" onclick="showAddProject()">
+        ＋ 新しい工事を追加
+      </button>
+      <button class="btn-delete-mode" id="btn-home-delete-mode" style="flex:1;" onclick="toggleHomeDeleteMode()">🗑 削除モード</button>
+    </div>
+  </div>
+  <div class="delete-bar" id="home-delete-bar" style="display:none;">
+    <button class="btn-cancel-delete" onclick="toggleHomeDeleteMode()">キャンセル</button>
+    <button class="btn-exec-delete" id="btn-home-exec-delete" onclick="execHomeDelete()" disabled>削除する（0件）</button>
+  </div>
+</div>
+
+<!-- ===== PRINT OPTION MODAL ===== -->
+<div class="modal-overlay" id="modal-print-option">
+  <div class="modal">
+    <div class="modal-title">🖨 印刷設定</div>
+    <div class="save-option" onclick="execPrint(true)">
+      <span class="save-option-icon">⏩</span>
+      <div class="save-option-text">
+        <strong>白紙スロットを詰めて印刷</strong>
+        <span>「印刷しない」のスロットをスキップして詰める</span>
+      </div>
+    </div>
+    <div class="save-option" onclick="execPrint(false)">
+      <span class="save-option-icon">⬜</span>
+      <div class="save-option-text">
+        <strong>白紙スロットをそのまま印刷</strong>
+        <span>位置を保ったまま該当セルを空白で出力</span>
+      </div>
+    </div>
+    <button class="modal-btn-cancel" style="width:100%;margin-top:8px" onclick="closeModal('modal-print-option')">キャンセル</button>
+  </div>
+</div>
+
+<!-- ===== PRINT AREA ===== -->
+<div id="print-area"></div>
+
+<!-- ===== PHOTOBOOK SCREEN ===== -->
+<div class="screen" id="screen-photobook">
+  <div class="app-header">
+    <div class="header-row">
+      <button class="btn-back" onclick="goHome()">← 戻る</button>
+      <span class="photobook-title" id="pb-title">写真帳</span>
+      <button class="btn-icon accent no-print" onclick="printBook()">🖨 印刷</button>
+    </div>
+  </div>
+
+  <div class="photobook-pad" id="photobook-pad">
+    <div class="print-header" id="print-title"></div>
+    <div class="print-sub" id="print-sub"></div>
+    <div class="photo-grid" id="photo-grid"></div>
+  </div>
+
+  <div class="bottom-bar no-print normal-bar">
+    <button class="btn-secondary" onclick="addPhotoSlot()">＋ 写真枠を追加</button>
+    <button class="btn-delete-mode" id="btn-delete-mode" onclick="toggleDeleteMode()">🗑 削除モード</button>
+    <button class="btn-primary" onclick="showSaveMenu()">💾 保存</button>
+  </div>
+  <div class="delete-bar no-print">
+    <button class="btn-cancel-delete" onclick="toggleDeleteMode()">キャンセル</button>
+    <button class="btn-exec-delete" id="btn-exec-delete" onclick="execDelete()" disabled>削除する（0件）</button>
+  </div>
+</div>
+
+<!-- ===== ADD PROJECT MODAL ===== -->
+<div class="modal-overlay" id="modal-add">
+  <div class="modal">
+    <div class="modal-title">新しい工事を追加</div>
+    <div class="modal-field">
+      <div class="modal-label">工事名</div>
+      <input class="modal-input" id="input-name" type="text" placeholder="例：○○ビル定期点検">
+    </div>
+    <div class="modal-field">
+      <div class="modal-label">場所</div>
+      <input class="modal-input" id="input-location" type="text" placeholder="例：3階 電気室">
+    </div>
+    <div class="modal-field">
+      <div class="modal-label">点検種別</div>
+      <select class="modal-select" id="input-type" onchange="toggleOtherInput('input-type-other', this.value)">
+        <option value="">選択してください</option>
+        <option>2週間点検</option>
+        <option>1ヶ月点検</option>
+        <option>3ヶ月点検</option>
+        <option>6ヶ月点検</option>
+        <option>年次点検</option>
+        <option>2年点検</option>
+        <option>その他</option>
+      </select>
+      <input class="modal-input" id="input-type-other" type="text" placeholder="点検種別を入力" style="margin-top:8px;display:none;">
+    </div>
+    </div>
+    <div class="modal-field">
+      <div class="modal-label">日付</div>
+      <input class="modal-input" id="input-person" type="date">
+    </div>
+    <div class="modal-btns">
+      <button class="modal-btn-cancel" onclick="closeModal('modal-add')">キャンセル</button>
+      <button class="modal-btn-ok" onclick="addProject()">追加する</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== PHOTO SOURCE MODAL ===== -->
+<div class="modal-overlay" id="modal-source">
+  <div class="modal">
+    <div class="modal-title">写真を追加</div>
+    <div class="source-btns">
+      <button class="source-btn" onclick="triggerCamera()">
+        <span class="source-btn-icon">📷</span>
+        <div class="source-btn-text">
+          <strong>カメラで撮影</strong>
+          <span>今すぐ写真を撮る</span>
+        </div>
+      </button>
+      <button class="source-btn" onclick="triggerAlbum()">
+        <span class="source-btn-icon">🖼️</span>
+        <div class="source-btn-text">
+          <strong>アルバムから選ぶ</strong>
+          <span>保存済みの写真を選択</span>
+        </div>
+      </button>
+    </div>
+    <div style="margin-top:16px;">
+      <button class="modal-btn-cancel" style="width:100%" onclick="closeModal('modal-source')">キャンセル</button>
+    </div>
+  </div>
+</div>
+
+<!-- File inputs -->
+<input type="file" id="file-camera" accept="image/*" capture="environment">
+<input type="file" id="file-album" accept="image/*" multiple>
+
+<!-- ===== SAVE MENU MODAL ===== -->
+<div class="modal-overlay" id="modal-save">
+  <div class="modal">
+    <div class="modal-title">保存方法を選択</div>
+    <div class="save-option" onclick="saveAsTemplate()">
+      <span class="save-option-icon">📋</span>
+      <div class="save-option-text">
+        <strong>テンプレートとして保存</strong>
+        <span>工事名・点検種別・写真枠数を保存</span>
+      </div>
+    </div>
+    <div class="save-option" onclick="saveAsNewFile()">
+      <span class="save-option-icon">📁</span>
+      <div class="save-option-text">
+        <strong>新しいファイルとして保存</strong>
+        <span>現在のデータを別名で保存</span>
+      </div>
+    </div>
+    <div class="save-option" onclick="showOverwriteSelect()">
+      <span class="save-option-icon">💾</span>
+      <div class="save-option-text">
+        <strong>作成済みファイルに上書き保存</strong>
+        <span>既存の工事データに保存</span>
+      </div>
+    </div>
+    <button class="modal-btn-cancel" style="width:100%;margin-top:8px" onclick="closeModal('modal-save')">キャンセル</button>
+  </div>
+</div>
+
+<!-- ===== SAVE AS TEMPLATE MODAL ===== -->
+<div class="modal-overlay" id="modal-save-template">
+  <div class="modal">
+    <div class="modal-title">テンプレートとして保存</div>
+    <div class="modal-field">
+      <div class="modal-label">テンプレート名</div>
+      <input class="modal-input" id="input-tpl-name" type="text" placeholder="例：月次点検テンプレート">
+    </div>
+    <div class="modal-btns">
+      <button class="modal-btn-cancel" onclick="closeModal('modal-save-template')">キャンセル</button>
+      <button class="modal-btn-ok" onclick="execSaveAsTemplate()">保存する</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SAVE AS NEW FILE MODAL ===== -->
+<div class="modal-overlay" id="modal-save-newfile">
+  <div class="modal">
+    <div class="modal-title">新しいファイルとして保存</div>
+    <div class="modal-field">
+      <div class="modal-label">ファイル名（工事名）</div>
+      <input class="modal-input" id="input-newfile-name" type="text" placeholder="例：○○ビル定期点検_5月">
+    </div>
+    <div class="modal-btns">
+      <button class="modal-btn-cancel" onclick="closeModal('modal-save-newfile')">キャンセル</button>
+      <button class="modal-btn-ok" onclick="execSaveAsNewFile()">保存する</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== OVERWRITE SELECT MODAL ===== -->
+<div class="modal-overlay" id="modal-overwrite">
+  <div class="modal">
+    <div class="modal-title">上書き先を選択</div>
+    <div id="overwrite-list"></div>
+    <button class="modal-btn-cancel" style="width:100%;margin-top:8px" onclick="closeModal('modal-overwrite')">キャンセル</button>
+  </div>
+</div>
+
+<!-- ===== TEMPLATE SELECT MODAL ===== -->
+<div class="modal-overlay" id="modal-template-select">
+  <div class="modal">
+    <div class="modal-title">テンプレートを選択</div>
+    <div id="template-select-list"></div>
+    <button class="modal-btn-cancel" style="width:100%;margin-top:8px" onclick="closeModal('modal-template-select')">キャンセル</button>
+  </div>
+</div>
+
+<!-- ===== TEMPLATE MANAGER MODAL ===== -->
+<div class="modal-overlay" id="modal-template-manager">
+  <div class="modal">
+    <div class="modal-title">テンプレート編集</div>
+    <div id="template-manager-list"></div>
+    <button class="modal-btn-cancel" style="width:100%;margin-top:12px" onclick="closeModal('modal-template-manager')">閉じる</button>
+  </div>
+</div>
+
+<!-- ===== EDIT TEMPLATE MODAL ===== -->
+<div class="modal-overlay" id="modal-edit-template">
+  <div class="modal">
+    <div class="modal-title">テンプレートを編集</div>
+    <input type="hidden" id="edit-tpl-id">
+    <div class="modal-field">
+      <div class="modal-label">テンプレート名</div>
+      <input class="modal-input" id="edit-tpl-name" type="text">
+    </div>
+    <div class="modal-field">
+      <div class="modal-label">工事名（初期値）</div>
+      <input class="modal-input" id="edit-tpl-projname" type="text">
+    </div>
+    <div class="modal-field">
+      <div class="modal-label">点検種別（初期値）</div>
+      <select class="modal-select" id="edit-tpl-type" onchange="toggleOtherInput('edit-tpl-type-other', this.value)">
+        <option value="">選択してください</option>
+        <option>2週間点検</option>
+        <option>1ヶ月点検</option>
+        <option>3ヶ月点検</option>
+        <option>6ヶ月点検</option>
+        <option>年次点検</option>
+        <option>2年点検</option>
+        <option>その他</option>
+      </select>
+      <input class="modal-input" id="edit-tpl-type-other" type="text" placeholder="点検種別を入力" style="margin-top:8px;display:none;">
+    </div>
+    <div class="modal-field">
+      <div class="modal-label">写真枠の数</div>
+      <select class="modal-select" id="edit-tpl-slots">
+        <option value="2">2枠</option>
+        <option value="4" selected>4枠</option>
+        <option value="6">6枠</option>
+        <option value="8">8枠</option>
+      </select>
+    </div>
+    <div class="modal-btns">
+      <button class="modal-btn-cancel" onclick="closeModal('modal-edit-template')">キャンセル</button>
+      <button class="modal-btn-ok" onclick="execEditTemplate()">更新する</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== STATE =====
+let projects = JSON.parse(localStorage.getItem('photobook_projects') || '[]');
+let templates = JSON.parse(localStorage.getItem('photobook_templates') || '[]');
+let currentProjectId = null;
+let currentSlotIndex = null;
+
+// ===== UTILS =====
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
+function today() {
+  const d = new Date();
+  return `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;
+}
+function save() {
+  localStorage.setItem('photobook_projects', JSON.stringify(projects));
+}
+function saveTemplates() {
+  localStorage.setItem('photobook_templates', JSON.stringify(templates));
+}
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2200);
+}
+
+// ===== MODALS =====
+function showAddProject() {
+  document.getElementById('input-name').value = '';
+  document.getElementById('input-location').value = '';
+  document.getElementById('input-type').value = '';
+  document.getElementById('input-type-other').value = '';
+  document.getElementById('input-type-other').style.display = 'none';
+  const d = new Date();
+  document.getElementById('input-person').value = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  document.getElementById('modal-add').classList.add('open');
+  setTimeout(() => document.getElementById('input-name').focus(), 300);
+}
+function toggleOtherInput(inputId, val) {
+  const el = document.getElementById(inputId);
+  if (!el) return;
+  if (val === 'その他') {
+    el.style.display = 'block';
+    el.focus();
+  } else {
+    el.style.display = 'none';
+    el.value = '';
+  }
+}
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+// ===== PROJECT MANAGEMENT =====
+function addProject() {
+  const name = document.getElementById('input-name').value.trim();
+  const location = document.getElementById('input-location').value.trim();
+  const typeRaw = document.getElementById('input-type').value;
+  const typeOther = document.getElementById('input-type-other').value.trim();
+  const type = typeRaw === 'その他' ? (typeOther || 'その他') : typeRaw;
+  const dateVal = document.getElementById('input-person').value;
+  const person = dateVal ? dateVal.replace(/-/g, '/') : today();
+  if (!name) { toast('⚠️ 工事名を入力してください'); return; }
+  if (!type) { toast('⚠️ 点検種別を選択してください'); return; }
+  const proj = { id: uid(), name, location, type, person, slots: [], createdAt: today() };
+  for (let i = 0; i < 4; i++) proj.slots.push({ id: uid(), photo: null, date: person, memo: '', name, location, type });
+  projects.unshift(proj);
+  save();
+  closeModal('modal-add');
+  renderHome();
+  openProject(proj.id);
+  toast('工事を追加しました');
+}
+
+function deleteProject(id) {
+  projects = projects.filter(p => p.id !== id);
+  save();
+  renderHome();
+  toast('削除しました');
+}
+
+// ===== HOME RENDER =====
+function renderHome() {
+  const list = document.getElementById('project-list');
+  const empty = document.getElementById('empty-state');
+  if (projects.length === 0) {
+    list.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+  list.innerHTML = projects.map(p => {
+    const photoCount = p.slots.filter(s => s.photo).length;
+    return `
+    <div class="project-card" data-project-id="${p.id}" onclick="onProjectClick(event, '${p.id}')">
+      <div class="project-check">✓</div>
+      <div class="project-icon">🏗️</div>
+      <div class="project-info">
+        <div class="project-name">${p.name}</div>
+        <div class="project-meta">${p.type}　${p.person ? '日付：' + p.person : ''}　作成：${p.createdAt}</div>
+      </div>
+      <div class="project-badge">${photoCount}枚</div>
+      <div class="project-arrow">›</div>
+    </div>`;
+  }).join('');
+}
+
+// ===== HOME DELETE MODE =====
+let homeDeleteMode = false;
+let selectedProjects = new Set();
+
+function toggleHomeDeleteMode() {
+  homeDeleteMode = !homeDeleteMode;
+  selectedProjects.clear();
+  document.body.classList.toggle('home-delete-mode', homeDeleteMode);
+  document.querySelectorAll('.project-card.selected').forEach(el => el.classList.remove('selected'));
+  updateHomeDeleteBtn();
+}
+
+function onProjectClick(event, id) {
+  if (!homeDeleteMode) {
+    openProject(id);
+    return;
+  }
+  const el = event.currentTarget;
+  if (selectedProjects.has(id)) {
+    selectedProjects.delete(id);
+    el.classList.remove('selected');
+  } else {
+    selectedProjects.add(id);
+    el.classList.add('selected');
+  }
+  updateHomeDeleteBtn();
+}
+
+function updateHomeDeleteBtn() {
+  const btn = document.getElementById('btn-home-exec-delete');
+  const count = selectedProjects.size;
+  btn.textContent = `削除する（${count}件）`;
+  btn.disabled = count === 0;
+}
+
+function execHomeDelete() {
+  if (selectedProjects.size === 0) return;
+  const count = selectedProjects.size;
+  projects = projects.filter(p => !selectedProjects.has(p.id));
+  save();
+  toggleHomeDeleteMode();
+  renderHome();
+  toast(`${count}件削除しました`);
+}
+
+// ===== PHOTO BOOK =====
+function openProject(id) {
+  currentProjectId = id;
+  const proj = projects.find(p => p.id === id);
+  document.getElementById('pb-title').textContent = proj.name;
+  document.getElementById('print-title').textContent = '写　真　帳';
+  document.getElementById('print-sub').textContent = `工事名：${proj.name}　点検種別：${proj.type}${proj.person ? '　担当：' + proj.person : ''}`;
+  document.getElementById('screen-home').classList.remove('active');
+  document.getElementById('screen-photobook').classList.add('active');
+  renderPhotoBook();
+}
+
+function goHome() {
+  document.getElementById('screen-photobook').classList.remove('active');
+  document.getElementById('screen-home').classList.add('active');
+  renderHome();
+}
+
+function renderPhotoBook() {
+  const proj = projects.find(p => p.id === currentProjectId);
+  const grid = document.getElementById('photo-grid');
+  grid.innerHTML = proj.slots.map((slot, i) => {
+    const slotName = slot.name !== undefined ? slot.name : proj.name;
+    const slotLocation = slot.location !== undefined ? slot.location : (proj.location || '');
+    const slotType = slot.type !== undefined ? slot.type : proj.type;
+    const dateVal = slot.date ? slot.date.replace(/\//g,'-') : '';
+    const memoVal = (slot.memo || '').replace(/"/g,'&quot;');
+    const nameVal = slotName.replace(/"/g,'&quot;');
+    const locationVal = slotLocation.replace(/"/g,'&quot;');
+    return `
+    <div class="photo-slot ${slot.photo ? 'has-photo' : ''} ${slot.blank ? 'blank-mode' : ''}" id="slot-${slot.id}" onclick="onSlotClick(event, ${i})">
+      <div class="slot-check">✓</div>
+      <div class="photo-area" onclick="onPhotoAreaClick(event, ${i})">
+        ${slot.photo
+          ? `<img src="${slot.photo}" alt="写真${i+1}">`
+          : `<div class="photo-placeholder"><div class="ph-icon">📷</div><div class="ph-text">タップして追加</div></div>`}
+        <div class="photo-overlay">写真${i+1}</div>
+      </div>
+      <div class="photo-info">
+        <div class="info-row">
+          <div class="info-label">工事名</div>
+          <input class="info-input" type="text" data-slot="${i}" data-key="name" value="${nameVal}">
+        </div>
+        <div class="info-row">
+          <div class="info-label">場所</div>
+          <input class="info-input" type="text" data-slot="${i}" data-key="location" placeholder="例：3階 電気室" value="${locationVal}">
+        </div>
+        <div class="info-row">
+          <div class="info-label">点検種別</div>
+          <select class="info-input" data-slot="${i}" data-key="type" data-other-target="type-other-${i}">
+            ${['2週間点検','1ヶ月点検','3ヶ月点検','6ヶ月点検','年次点検','2年点検','その他'].map(t =>
+              `<option value="${t}" ${slotType === t ? 'selected' : ''}>${t}</option>`
+            ).join('')}
+          </select>
+          <input class="info-input" id="type-other-${i}" type="text" placeholder="点検種別を入力" data-slot="${i}" data-key="type"
+            style="margin-top:4px;${slotType === 'その他' || (slotType && !['2週間点検','1ヶ月点検','3ヶ月点検','6ヶ月点検','年次点検','2年点検','その他'].includes(slotType)) ? '' : 'display:none;'}"
+            value="${slotType === 'その他' ? '' : (!['2週間点検','1ヶ月点検','3ヶ月点検','6ヶ月点検','年次点検','2年点検'].includes(slotType) ? slotType : '')}">
+        </div>
+        <div class="info-row">
+          <div class="info-label">撮影日</div>
+          <input class="info-input" type="date" data-slot="${i}" data-key="date" data-isdate="1" value="${dateVal}">
+        </div>
+        <div class="info-row">
+          <div class="info-label">説明・メモ</div>
+          <input class="info-input" type="text" data-slot="${i}" data-key="memo" placeholder="例：外壁ひび割れ箇所" value="${memoVal}">
+        </div>
+      </div>
+      <label class="blank-toggle no-print">
+        <span class="blank-toggle-label">🚫 印刷しない（白紙）</span>
+        <input type="checkbox" data-slot="${i}" data-key="blank" ${slot.blank ? 'checked' : ''}>
+      </label>
+    </div>`;
+  }).join('');
+
+  // イベント委任で全inputをまとめて処理
+  grid.querySelectorAll('.info-input').forEach(el => {
+    el.addEventListener('change', function() {
+      const idx = parseInt(this.dataset.slot);
+      const key = this.dataset.key;
+      let val = this.value;
+      if (this.dataset.isdate) val = val.replace(/-/g, '/');
+      // selectでその他を選んだ場合は入力欄を表示、値はまだ保存しない
+      if (this.tagName === 'SELECT' && this.dataset.otherTarget) {
+        const otherEl = document.getElementById(this.dataset.otherTarget);
+        if (val === 'その他') {
+          otherEl.style.display = 'block';
+          otherEl.value = '';
+          otherEl.focus();
+          return; // 入力欄に値が入るまで保存しない
+        } else {
+          otherEl.style.display = 'none';
+          otherEl.value = '';
+        }
+      }
+      updateSlot(idx, key, val);
+    });
+  });
+  // 白紙チェックボックス
+  grid.querySelectorAll('.blank-toggle input[type=checkbox]').forEach(el => {
+    el.addEventListener('change', function() {
+      const idx = parseInt(this.dataset.slot);
+      updateSlot(idx, 'blank', this.checked);
+      const slotEl = document.getElementById('slot-' + proj.slots[idx].id);
+      if (slotEl) slotEl.classList.toggle('blank-mode', this.checked);
+    });
+  });
+}
+
+function updateSlot(index, key, value) {
+  const proj = projects.find(p => p.id === currentProjectId);
+  proj.slots[index][key] = value;
+  save();
+}
+
+function addPhotoSlot() {
+  const proj = projects.find(p => p.id === currentProjectId);
+  proj.slots.push({ id: uid(), photo: null, date: today(), memo: '' });
+  save();
+  renderPhotoBook();
+  toast('写真枠を追加しました');
+}
+
+// ===== DELETE MODE =====
+let deleteMode = false;
+let selectedSlots = new Set();
+
+function toggleDeleteMode() {
+  deleteMode = !deleteMode;
+  selectedSlots.clear();
+  document.body.classList.toggle('delete-mode', deleteMode);
+  updateDeleteBtn();
+}
+
+function onSlotClick(event, index) {
+  if (!deleteMode) return;
+  const el = event.currentTarget;
+  if (selectedSlots.has(index)) {
+    selectedSlots.delete(index);
+    el.classList.remove('selected');
+  } else {
+    selectedSlots.add(index);
+    el.classList.add('selected');
+  }
+  updateDeleteBtn();
+}
+
+function onPhotoAreaClick(event, index) {
+  if (deleteMode) { event.stopPropagation(); return; }
+  choosePhoto(index);
+}
+
+function updateDeleteBtn() {
+  const btn = document.getElementById('btn-exec-delete');
+  const count = selectedSlots.size;
+  btn.textContent = `削除する（${count}件）`;
+  btn.disabled = count === 0;
+}
+
+function execDelete() {
+  if (selectedSlots.size === 0) return;
+  const proj = projects.find(p => p.id === currentProjectId);
+  const indices = Array.from(selectedSlots).sort((a, b) => b - a);
+  indices.forEach(i => proj.slots.splice(i, 1));
+  save();
+  toggleDeleteMode();
+  renderPhotoBook();
+  toast(`${indices.length}件削除しました`);
+}
+
+// ===== SAVE MENU =====
+function showSaveMenu() {
+  document.getElementById('modal-save').classList.add('open');
+}
+
+function saveAsTemplate() {
+  closeModal('modal-save');
+  const proj = projects.find(p => p.id === currentProjectId);
+  document.getElementById('input-tpl-name').value = proj.name + 'のテンプレート';
+  document.getElementById('modal-save-template').classList.add('open');
+}
+
+function execSaveAsTemplate() {
+  const tplName = document.getElementById('input-tpl-name').value.trim();
+  if (!tplName) { toast('⚠️ テンプレート名を入力してください'); return; }
+  const proj = projects.find(p => p.id === currentProjectId);
+  const tpl = {
+    id: uid(),
+    name: tplName,
+    projName: proj.name,
+    type: proj.type,
+    slotCount: proj.slots.length,
+    createdAt: today()
+  };
+  templates.unshift(tpl);
+  saveTemplates();
+  closeModal('modal-save-template');
+  toast('テンプレートとして保存しました');
+}
+
+function saveAsNewFile() {
+  closeModal('modal-save');
+  const proj = projects.find(p => p.id === currentProjectId);
+  document.getElementById('input-newfile-name').value = proj.name + '_コピー';
+  document.getElementById('modal-save-newfile').classList.add('open');
+}
+
+function execSaveAsNewFile() {
+  const newName = document.getElementById('input-newfile-name').value.trim();
+  if (!newName) { toast('⚠️ ファイル名を入力してください'); return; }
+  const proj = projects.find(p => p.id === currentProjectId);
+  const newProj = JSON.parse(JSON.stringify(proj));
+  newProj.id = uid();
+  newProj.name = newName;
+  newProj.createdAt = today();
+  projects.unshift(newProj);
+  save();
+  closeModal('modal-save-newfile');
+  toast('新しいファイルとして保存しました');
+  renderHome();
+}
+
+function showOverwriteSelect() {
+  closeModal('modal-save');
+  const list = document.getElementById('overwrite-list');
+  const others = projects.filter(p => p.id !== currentProjectId);
+  if (others.length === 0) {
+    list.innerHTML = '<p style="text-align:center;color:var(--text-sub);padding:20px 0;">他のファイルがありません</p>';
+  } else {
+    list.innerHTML = others.map(p => `
+      <div class="file-list-item" onclick="execOverwrite('${p.id}')">
+        <span style="font-size:20px">📁</span>
+        <div>
+          <div class="file-list-item-name">${p.name}</div>
+          <div class="file-list-item-meta">${p.type}　${p.createdAt}</div>
+        </div>
+      </div>`).join('');
+  }
+  document.getElementById('modal-overwrite').classList.add('open');
+}
+
+function execOverwrite(targetId) {
+  const src = projects.find(p => p.id === currentProjectId);
+  const targetIdx = projects.findIndex(p => p.id === targetId);
+  const merged = JSON.parse(JSON.stringify(src));
+  merged.id = targetId;
+  merged.name = projects[targetIdx].name;
+  merged.createdAt = projects[targetIdx].createdAt;
+  projects[targetIdx] = merged;
+  save();
+  closeModal('modal-overwrite');
+  toast('上書き保存しました');
+}
+
+function saveCurrentProject() {
+  save();
+  toast('💾 保存しました');
+}
+
+// ===== TEMPLATE FROM HOME =====
+function showTemplateSelect() {
+  const list = document.getElementById('template-select-list');
+  if (templates.length === 0) {
+    list.innerHTML = '<p style="text-align:center;color:var(--text-sub);padding:20px 0;">テンプレートがまだありません<br>写真帳を保存時に作成できます</p>';
+  } else {
+    list.innerHTML = templates.map(t => `
+      <div class="file-list-item" onclick="createFromTemplate('${t.id}')">
+        <span style="font-size:20px">📋</span>
+        <div>
+          <div class="file-list-item-name">${t.name}</div>
+          <div class="file-list-item-meta">${t.type}　写真枠${t.slotCount}枚　${t.createdAt}</div>
+        </div>
+      </div>`).join('');
+  }
+  document.getElementById('modal-template-select').classList.add('open');
+}
+
+function createFromTemplate(tplId) {
+  const tpl = templates.find(t => t.id === tplId);
+  const proj = {
+    id: uid(), name: tpl.projName, type: tpl.type,
+    person: today(), slots: [], createdAt: today()
+  };
+  for (let i = 0; i < tpl.slotCount; i++) {
+    proj.slots.push({ id: uid(), photo: null, date: today(), memo: '', name: tpl.projName, type: tpl.type });
+  }
+  projects.unshift(proj);
+  save();
+  closeModal('modal-template-select');
+  renderHome();
+  openProject(proj.id);
+  toast('テンプレートから作成しました');
+}
+
+function showTemplateManager() {
+  renderTemplateManager();
+  document.getElementById('modal-template-manager').classList.add('open');
+}
+
+function renderTemplateManager() {
+  const list = document.getElementById('template-manager-list');
+  if (templates.length === 0) {
+    list.innerHTML = '<p style="text-align:center;color:var(--text-sub);padding:20px 0;">テンプレートがまだありません</p>';
+    return;
+  }
+  list.innerHTML = templates.map(t => `
+    <div class="template-card">
+      <div class="template-card-info">
+        <div class="template-card-name">${t.name}</div>
+        <div class="template-card-meta">${t.type}　写真枠${t.slotCount}枚　作成：${t.createdAt}</div>
+      </div>
+      <div class="template-card-btns">
+        <button class="tpl-btn" onclick="showEditTemplate('${t.id}')">編集</button>
+        <button class="tpl-btn danger" onclick="deleteTemplate('${t.id}')">削除</button>
+      </div>
+    </div>`).join('');
+}
+
+function showEditTemplate(tplId) {
+  const tpl = templates.find(t => t.id === tplId);
+  document.getElementById('edit-tpl-id').value = tplId;
+  document.getElementById('edit-tpl-name').value = tpl.name;
+  document.getElementById('edit-tpl-projname').value = tpl.projName || '';
+  document.getElementById('edit-tpl-type').value = tpl.type || '';
+  document.getElementById('edit-tpl-slots').value = tpl.slotCount || 4;
+  document.getElementById('modal-edit-template').classList.add('open');
+}
+
+function execEditTemplate() {
+  const id = document.getElementById('edit-tpl-id').value;
+  const idx = templates.findIndex(t => t.id === id);
+  if (idx === -1) return;
+  templates[idx].name = document.getElementById('edit-tpl-name').value.trim() || templates[idx].name;
+  templates[idx].projName = document.getElementById('edit-tpl-projname').value.trim();
+  const typeRaw = document.getElementById('edit-tpl-type').value;
+  const typeOther = document.getElementById('edit-tpl-type-other').value.trim();
+  templates[idx].type = typeRaw === 'その他' ? (typeOther || 'その他') : typeRaw;
+  templates[idx].slotCount = parseInt(document.getElementById('edit-tpl-slots').value);
+  saveTemplates();
+  closeModal('modal-edit-template');
+  renderTemplateManager();
+  toast('テンプレートを更新しました');
+}
+
+function deleteTemplate(tplId) {
+  templates = templates.filter(t => t.id !== tplId);
+  saveTemplates();
+  renderTemplateManager();
+  toast('テンプレートを削除しました');
+}
+
+// ===== PHOTO INPUT =====
+function choosePhoto(index) {
+  currentSlotIndex = index;
+  document.getElementById('modal-source').classList.add('open');
+}
+
+function triggerCamera() {
+  closeModal('modal-source');
+  document.getElementById('file-camera').click();
+}
+
+function triggerAlbum() {
+  closeModal('modal-source');
+  document.getElementById('file-album').click();
+}
+
+function handleFile(file) {
+  if (!file || !file.type.startsWith('image/')) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    // 画像をリサイズして保存容量を節約
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const MAX = 1200;
+      let w = img.width, h = img.height;
+      if (w > MAX || h > MAX) {
+        if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+        else { w = Math.round(w * MAX / h); h = MAX; }
+      }
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+      const proj = projects.find(p => p.id === currentProjectId);
+      proj.slots[currentSlotIndex].photo = dataUrl;
+      // ファイルの更新日時から撮影日を設定
+      if (file.lastModified) {
+        const d = new Date(file.lastModified);
+        proj.slots[currentSlotIndex].date = `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;
+      }
+      save();
+      renderPhotoBook();
+      toast('写真を追加しました');
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+document.getElementById('file-camera').addEventListener('change', e => {
+  handleFile(e.target.files[0]);
+  e.target.value = '';
+});
+document.getElementById('file-album').addEventListener('change', e => {
+  const files = Array.from(e.target.files);
+  const proj = projects.find(p => p.id === currentProjectId);
+  // 複数選択の場合は空きスロットに順番に入れる
+  let slotIdx = currentSlotIndex;
+  files.forEach((file, fi) => {
+    if (fi === 0) {
+      currentSlotIndex = slotIdx;
+      handleFile(file);
+    } else {
+      // 次の空きスロット or 新規追加
+      let nextEmpty = proj.slots.findIndex((s, i) => i > slotIdx && !s.photo);
+      if (nextEmpty === -1) {
+        proj.slots.push({ id: uid(), photo: null, date: today(), memo: '' });
+        nextEmpty = proj.slots.length - 1;
+      }
+      currentSlotIndex = nextEmpty;
+      handleFile(file);
+    }
+    slotIdx = currentSlotIndex + 1;
+  });
+  e.target.value = '';
+});
+
+// ===== PRINT =====
+function printBook() {
+  document.getElementById('modal-print-option').classList.add('open');
+}
+
+function execPrint(skipBlanks) {
+  closeModal('modal-print-option');
+  const proj = projects.find(p => p.id === currentProjectId);
+  const area = document.getElementById('print-area');
+
+  // skipBlanks=true: 白紙除外して詰める / false: 位置保持で空白セル
+  let slots;
+  if (skipBlanks) {
+    slots = proj.slots.filter(s => !s.blank);
+  } else {
+    slots = proj.slots.map(s => s.blank ? null : s);
+  }
+
+  const totalPages = Math.ceil(slots.length / 4);
+  let pagesHtml = '';
+
+  for (let page = 0; page < totalPages; page++) {
+    const pageSlots = slots.slice(page * 4, page * 4 + 4);
+    while (pageSlots.length < 4) pageSlots.push(null);
+
+    pagesHtml += `<div style="box-sizing:border-box;display:grid;grid-template-rows:1fr 1fr;grid-template-columns:1fr 1fr;gap:4mm;width:297mm;height:210mm;padding:10mm;overflow:hidden;${page > 0 ? 'page-break-before:always;' : ''}">`;
+
+    pageSlots.forEach(slot => {
+      if (!slot) {
+        pagesHtml += `<div class="print-slot" style="border:0.5mm solid #eee;"></div>`;
+        return;
+      }
+      const name     = slot.name     || proj.name     || '';
+      const location = slot.location || proj.location || '';
+      const type     = slot.type     || proj.type     || '';
+      const date     = slot.date     || '';
+      const memo     = slot.memo     || '';
+      pagesHtml += `
+        <div class="print-slot">
+          <div class="print-slot-photo">
+            ${slot.photo
+              ? `<img src="${slot.photo}" alt="写真">`
+              : `<div class="print-slot-photo-empty">写真なし</div>`}
+          </div>
+          <div class="print-slot-info">
+            <div class="print-slot-info-row">
+              <div class="print-slot-info-label">工事名</div>
+              <div class="print-slot-info-value">${name}</div>
+            </div>
+            <div class="print-slot-info-row">
+              <div class="print-slot-info-label">場所</div>
+              <div class="print-slot-info-value">${location}</div>
+            </div>
+            <div class="print-slot-info-row">
+              <div class="print-slot-info-label">点検種別</div>
+              <div class="print-slot-info-value">${type}</div>
+            </div>
+            <div class="print-slot-info-row">
+              <div class="print-slot-info-label">撮影日</div>
+              <div class="print-slot-info-value">${date}</div>
+            </div>
+            <div class="print-slot-info-row">
+              <div class="print-slot-info-label">説明・メモ</div>
+              <div class="print-slot-info-value">${memo}</div>
+            </div>
+          </div>
+        </div>`;
+    });
+    pagesHtml += `</div>`;
+  }
+
+  area.innerHTML = pagesHtml;
+  // DOMが確実に描画されてから印刷
+  setTimeout(() => {
+    const scrollY = window.scrollY;
+    window.print();
+    // 印刷後にprint-areaをクリアしスクロール位置を復元
+    area.innerHTML = '';
+    window.scrollTo(0, scrollY);
+  }, 100);
+}
+
+// ===== OVERLAY CLOSE =====
+window.addEventListener('afterprint', () => {
+  document.getElementById('print-area').innerHTML = '';
+});
+document.querySelectorAll('.modal-overlay').forEach(el => {
+  el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); });
+});
+
+// ===== INIT =====
+renderHome();
+</script>
+<script>
+// オフライン対応：Service Worker登録
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch((e) => console.log('SW登録失敗:', e));
+  });
+}
+</script>
+</body>
+</html>
