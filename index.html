@@ -7,12 +7,12 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="写真帳">
 <meta name="theme-color" content="#1a2744">
-<link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" href="icon-192.png">
-<link rel="icon" type="image/png" href="icon-192.png">
 <title>写真帳</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Serif+Display&display=swap" rel="stylesheet">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" type="image/png" href="icon-192.png">
 <style>
   :root {
     --navy: #1a2744;
@@ -407,7 +407,24 @@
       background: white;
       overflow: hidden;
       border-right: 0.5mm solid #999;
+      position: relative;
     }
+    .print-board {
+      position: absolute;
+      background: #1f6e43;
+      border: 0.4mm solid #ffffff;
+      aspect-ratio: 7 / 5;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .print-board .board-table { width: 100%; height: 100%; border-collapse: collapse; table-layout: fixed; }
+    .print-board .board-table td {
+      border: 0.2mm solid #ffffff;
+      color: #ffffff; font-weight: 500;
+      padding: 0 1mm;
+      overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+    }
+    .print-board .board-table td.board-label { width: 30%; font-weight: 700; }
     .print-slot-photo img {
       width: 100%; height: 100%;
       object-fit: contain;
@@ -589,6 +606,7 @@
   .file-list-item:active { background: #e0e8f5; border-color: var(--blue-light); }
   .file-list-item-name { font-size: 14px; font-weight: 600; color: var(--text); flex: 1; }
   .file-list-item-meta { font-size: 11px; color: var(--text-sub); }
+  .toast {
     position: fixed; top: 80px; left: 50%; transform: translateX(-50%);
     background: var(--navy); color: white;
     padding: 10px 22px; border-radius: 30px;
@@ -629,6 +647,46 @@
     background: #c0392b; border-color: #c0392b; color: white;
   }
   body.home-delete-mode #home-delete-bar { display: flex !important; }
+
+  /* ===== 電子黒板 ===== */
+  .board-overlay {
+    position: absolute;
+    background: #1f6e43;
+    border: 2px solid #ffffff;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.35);
+    aspect-ratio: 7 / 5;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    z-index: 5;
+    cursor: move;
+  }
+  .board-table {
+    width: 100%; height: 100%;
+    border-collapse: collapse; table-layout: fixed;
+  }
+  .board-table td {
+    border: 1px solid rgba(255,255,255,0.9);
+    color: #ffffff;
+    font-weight: 500;
+    padding: 0 4px;
+    overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+  }
+  .board-table td.board-label { width: 30%; font-weight: 700; }
+  .board-close {
+    position: absolute; top: -10px; right: -10px;
+    width: 22px; height: 22px; border-radius: 50%;
+    background: #c0392b; color: white; border: 2px solid white;
+    font-size: 11px; line-height: 1; cursor: pointer; z-index: 6;
+    padding: 0;
+  }
+  .board-resize {
+    position: absolute; right: -9px; bottom: -9px;
+    width: 20px; height: 20px;
+    background: white; border: 2px solid var(--blue);
+    border-radius: 4px; cursor: nwse-resize; z-index: 6;
+    touch-action: none;
+  }
 
   .toast.show { opacity: 1; }
 </style>
@@ -751,7 +809,6 @@
       </select>
       <input class="modal-input" id="input-type-other" type="text" placeholder="点検種別を入力" style="margin-top:8px;display:none;">
     </div>
-    </div>
     <div class="modal-field">
       <div class="modal-label">日付</div>
       <input class="modal-input" id="input-person" type="date">
@@ -780,6 +837,13 @@
         <div class="source-btn-text">
           <strong>アルバムから選ぶ</strong>
           <span>保存済みの写真を選択</span>
+        </div>
+      </button>
+      <button class="source-btn" onclick="createBoard()">
+        <span class="source-btn-icon">📋</span>
+        <div class="source-btn-text">
+          <strong>黒板を作成</strong>
+          <span>写真の上に電子黒板を重ねる</span>
         </div>
       </button>
     </div>
@@ -924,8 +988,11 @@
 
 <script>
 // ===== STATE =====
-let projects = JSON.parse(localStorage.getItem('photobook_projects') || '[]');
-let templates = JSON.parse(localStorage.getItem('photobook_templates') || '[]');
+function safeGetItem(key) {
+  try { return localStorage.getItem(key); } catch (err) { return null; }
+}
+let projects = JSON.parse(safeGetItem('photobook_projects') || '[]');
+let templates = JSON.parse(safeGetItem('photobook_templates') || '[]');
 let currentProjectId = null;
 let currentSlotIndex = null;
 
@@ -935,11 +1002,23 @@ function today() {
   const d = new Date();
   return `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;
 }
+let storageWarned = false;
+function safeSetItem(key, value) {
+  try {
+    localStorage.setItem(key, value);
+  } catch (err) {
+    if (!storageWarned) {
+      storageWarned = true;
+      // 直後の通常トーストに上書きされないよう、少し待ってから表示
+      setTimeout(() => toast('⚠️ この画面ではデータを保存できません。ブラウザで開いてください'), 2600);
+    }
+  }
+}
 function save() {
-  localStorage.setItem('photobook_projects', JSON.stringify(projects));
+  safeSetItem('photobook_projects', JSON.stringify(projects));
 }
 function saveTemplates() {
-  localStorage.setItem('photobook_templates', JSON.stringify(templates));
+  safeSetItem('photobook_templates', JSON.stringify(templates));
 }
 function toast(msg) {
   const el = document.getElementById('toast');
@@ -1109,6 +1188,12 @@ function renderPhotoBook() {
           ? `<img src="${slot.photo}" alt="写真${i+1}">`
           : `<div class="photo-placeholder"><div class="ph-icon">📷</div><div class="ph-text">タップして追加</div></div>`}
         <div class="photo-overlay">写真${i+1}</div>
+        ${slot.board ? `
+        <div class="board-overlay" data-board-slot="${i}" style="left:${slot.board.x}%;top:${slot.board.y}%;width:${slot.board.w}%;">
+          <button class="board-close no-print" onclick="event.stopPropagation();deleteBoard(${i})">✕</button>
+          <table class="board-table">${boardRowsHtml(slot, proj)}</table>
+          <div class="board-resize"></div>
+        </div>` : ''}
       </div>
       <div class="photo-info">
         <div class="info-row">
@@ -1167,6 +1252,7 @@ function renderPhotoBook() {
         }
       }
       updateSlot(idx, key, val);
+      if (['name', 'location', 'type', 'date', 'memo'].includes(key)) refreshBoard(idx);
     });
   });
   // 白紙チェックボックス
@@ -1178,6 +1264,8 @@ function renderPhotoBook() {
       if (slotEl) slotEl.classList.toggle('blank-mode', this.checked);
     });
   });
+  // 黒板のドラッグ・拡大縮小
+  grid.querySelectorAll('.board-overlay').forEach(initBoardInteraction);
 }
 
 function updateSlot(index, key, value) {
@@ -1422,6 +1510,112 @@ function deleteTemplate(tplId) {
   toast('テンプレートを削除しました');
 }
 
+// ===== 電子黒板 =====
+function boardValues(slot, proj) {
+  return [
+    slot.name !== undefined ? slot.name : proj.name,
+    slot.location !== undefined ? slot.location : (proj.location || ''),
+    slot.type !== undefined ? slot.type : proj.type,
+    slot.date || '',
+    slot.memo || ''
+  ];
+}
+
+function boardRowsHtml(slot, proj) {
+  const labels = ['工事名', '場所', '点検種別', '撮影日', 'メモ'];
+  const vals = boardValues(slot, proj);
+  return labels.map((label, ri) =>
+    `<tr><td class="board-label">${label}</td><td class="board-value" data-board-row="${ri}">${String(vals[ri] || '').replace(/</g, '&lt;')}</td></tr>`
+  ).join('');
+}
+
+function createBoard() {
+  closeModal('modal-source');
+  const proj = projects.find(p => p.id === currentProjectId);
+  const slot = proj.slots[currentSlotIndex];
+  if (slot.board) { toast('この枠にはすでに黒板があります'); return; }
+  slot.board = { x: 52, y: 52, w: 45 };
+  save();
+  renderPhotoBook();
+  toast('黒板を作成しました');
+}
+
+function deleteBoard(index) {
+  if (!confirm('黒板を削除しますか？（写真と入力内容は残ります）')) return;
+  const proj = projects.find(p => p.id === currentProjectId);
+  delete proj.slots[index].board;
+  save();
+  renderPhotoBook();
+  toast('黒板を削除しました');
+}
+
+function refreshBoard(index) {
+  const proj = projects.find(p => p.id === currentProjectId);
+  const slot = proj.slots[index];
+  if (!slot.board) return;
+  const el = document.querySelector(`.board-overlay[data-board-slot="${index}"]`);
+  if (!el) return;
+  const vals = boardValues(slot, proj);
+  el.querySelectorAll('.board-value').forEach((td, ri) => { td.textContent = vals[ri] || ''; });
+}
+
+function fitBoardFont(el) {
+  el.style.fontSize = Math.max(7, el.offsetWidth * 0.052) + 'px';
+}
+
+function initBoardInteraction(el) {
+  fitBoardFont(el);
+  const idx = parseInt(el.dataset.boardSlot);
+  const area = el.parentElement; // .photo-area
+  let mode = null, startX = 0, startY = 0, startL = 0, startT = 0, startW = 0;
+
+  el.addEventListener('click', e => e.stopPropagation());
+
+  el.addEventListener('pointerdown', e => {
+    if (e.target.classList.contains('board-close')) return;
+    e.preventDefault();
+    e.stopPropagation();
+    mode = e.target.classList.contains('board-resize') ? 'resize' : 'move';
+    startX = e.clientX; startY = e.clientY;
+    startL = el.offsetLeft; startT = el.offsetTop; startW = el.offsetWidth;
+    try { el.setPointerCapture(e.pointerId); } catch (err) { /* 古い環境では失敗しても動作継続 */ }
+  });
+
+  el.addEventListener('pointermove', e => {
+    if (!mode) return;
+    const aw = area.clientWidth, ah = area.clientHeight;
+    if (mode === 'move') {
+      let nl = startL + (e.clientX - startX);
+      let nt = startT + (e.clientY - startY);
+      nl = Math.min(Math.max(0, nl), Math.max(0, aw - el.offsetWidth));
+      nt = Math.min(Math.max(0, nt), Math.max(0, ah - el.offsetHeight));
+      el.style.left = (nl / aw * 100) + '%';
+      el.style.top = (nt / ah * 100) + '%';
+    } else {
+      let nw = startW + (e.clientX - startX);
+      nw = Math.min(Math.max(aw * 0.2, nw), aw - startL);       // 横のはみ出し防止・最小20%
+      const maxH = ah - startT;                                  // 縦のはみ出し防止（縦横比7:5）
+      if (nw * 5 / 7 > maxH) nw = maxH * 7 / 5;
+      el.style.width = (nw / aw * 100) + '%';
+      fitBoardFont(el);
+    }
+  });
+
+  const endDrag = () => {
+    if (!mode) return;
+    mode = null;
+    const proj = projects.find(p => p.id === currentProjectId);
+    const b = proj.slots[idx].board;
+    if (!b) return;
+    b.x = parseFloat(el.style.left);
+    b.y = parseFloat(el.style.top);
+    b.w = parseFloat(el.style.width);
+    save();
+  };
+  el.addEventListener('pointerup', endDrag);
+  el.addEventListener('pointercancel', endDrag);
+}
+
 // ===== PHOTO INPUT =====
 function choosePhoto(index) {
   currentSlotIndex = index;
@@ -1542,6 +1736,10 @@ function execPrint(skipBlanks) {
             ${slot.photo
               ? `<img src="${slot.photo}" alt="写真">`
               : `<div class="print-slot-photo-empty">写真なし</div>`}
+            ${slot.board ? `
+            <div class="print-board" style="left:${slot.board.x}%;top:${slot.board.y}%;width:${slot.board.w}%;font-size:${(75 * slot.board.w / 100 * 0.052).toFixed(2)}mm;">
+              <table class="board-table">${boardRowsHtml(slot, proj)}</table>
+            </div>` : ''}
           </div>
           <div class="print-slot-info">
             <div class="print-slot-info-row">
@@ -1590,6 +1788,10 @@ document.querySelectorAll('.modal-overlay').forEach(el => {
 });
 
 // ===== INIT =====
+// エラーが起きたら画面に表示（原因調査を簡単にするため）
+window.addEventListener('error', e => {
+  toast('⚠️ エラーが発生：' + (e.message || '不明なエラー'));
+});
 renderHome();
 </script>
 <script>
