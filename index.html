@@ -467,6 +467,7 @@
     }
   }
   .print-slot { display: none; }
+  #print-area { display: none; }
 
   /* ===== PHOTO SOURCE CHOICE ===== */
   .source-btns { display: flex; flex-direction: column; gap: 12px; margin-top: 8px; }
@@ -648,6 +649,24 @@
   }
   body.home-delete-mode #home-delete-bar { display: flex !important; }
 
+  /* ===== 印刷設定の選択カード ===== */
+  .print-choice-row { display: flex; gap: 10px; margin-bottom: 16px; }
+  .print-choice {
+    flex: 1;
+    background: var(--bg);
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 8px;
+    font-size: 13px; font-weight: 700;
+    font-family: 'Noto Sans JP', sans-serif;
+    color: var(--text);
+    cursor: pointer;
+    line-height: 1.5;
+    transition: all 0.15s;
+  }
+  .print-choice span { display: block; font-size: 11px; color: var(--text-sub); font-weight: 500; }
+  .print-choice.selected { border-color: var(--blue); background: #e8f1fb; color: var(--navy); }
+
   /* ===== 電子黒板 ===== */
   .board-overlay {
     position: absolute;
@@ -687,9 +706,56 @@
     border-radius: 4px; cursor: nwse-resize; z-index: 6;
     touch-action: none;
   }
+  .board-zoom {
+    position: absolute; top: -10px; left: -10px;
+    width: 22px; height: 22px; border-radius: 50%;
+    background: var(--blue); color: white; border: 2px solid white;
+    font-size: 11px; line-height: 1; cursor: pointer; z-index: 6;
+    padding: 0;
+  }
+
+  /* ===== 黒板 大画面調整 ===== */
+  .board-editor {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(10,16,30,0.96);
+    z-index: 300;
+    flex-direction: column;
+  }
+  .board-editor.open { display: flex; }
+  .board-editor-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 16px; color: white; font-size: 14px; font-weight: 700;
+  }
+  .board-editor-done {
+    background: var(--accent); color: var(--navy);
+    border: none; border-radius: 10px; padding: 10px 18px;
+    font-size: 14px; font-weight: 700; font-family: 'Noto Sans JP', sans-serif;
+    cursor: pointer;
+  }
+  .board-editor-stage-wrap {
+    flex: 1; display: flex; align-items: center; justify-content: center;
+    padding: 0 8px 24px; min-height: 0;
+  }
+  .board-editor-stage {
+    position: relative;
+    width: min(100%, calc((100vh - 140px) * 4 / 3));
+    aspect-ratio: 4 / 3;
+    background: #555;
+    overflow: hidden;
+    border-radius: 8px;
+  }
+  .board-editor-stage img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .board-editor-stage .board-placeholder {
+    width: 100%; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+    color: #aaa; font-size: 14px;
+    text-align: center; padding: 0 20px;
+  }
 
   .toast.show { opacity: 1; }
 </style>
+<style id="print-page-style"></style>
 </head>
 <body>
 
@@ -735,26 +801,36 @@
 <div class="modal-overlay" id="modal-print-option">
   <div class="modal">
     <div class="modal-title">🖨 印刷設定</div>
-    <div class="save-option" onclick="execPrint(true)">
-      <span class="save-option-icon">⏩</span>
-      <div class="save-option-text">
-        <strong>白紙スロットを詰めて印刷</strong>
-        <span>「印刷しない」のスロットをスキップして詰める</span>
-      </div>
+    <div class="modal-label">レイアウト</div>
+    <div class="print-choice-row">
+      <button class="print-choice" id="choice-layout-landscape" onclick="setPrintLayout('landscape')">🖼 横 2×2<span>A4横・1ページ4枚</span></button>
+      <button class="print-choice" id="choice-layout-portrait" onclick="setPrintLayout('portrait')">📄 縦 1×4<span>A4縦・1ページ4段</span></button>
     </div>
-    <div class="save-option" onclick="execPrint(false)">
-      <span class="save-option-icon">⬜</span>
-      <div class="save-option-text">
-        <strong>白紙スロットをそのまま印刷</strong>
-        <span>位置を保ったまま該当セルを空白で出力</span>
-      </div>
+    <div class="modal-label">白紙スロット</div>
+    <div class="print-choice-row">
+      <button class="print-choice" id="choice-blank-skip" onclick="setPrintBlank(true)">⏩ 詰めて印刷<span>白紙をスキップ</span></button>
+      <button class="print-choice" id="choice-blank-keep" onclick="setPrintBlank(false)">⬜ そのまま印刷<span>位置を保って空白</span></button>
     </div>
-    <button class="modal-btn-cancel" style="width:100%;margin-top:8px" onclick="closeModal('modal-print-option')">キャンセル</button>
+    <div class="modal-btns">
+      <button class="modal-btn-cancel" onclick="closeModal('modal-print-option')">キャンセル</button>
+      <button class="modal-btn-ok" onclick="execPrintFromModal()">印刷する</button>
+    </div>
   </div>
 </div>
 
 <!-- ===== PRINT AREA ===== -->
 <div id="print-area"></div>
+
+<!-- ===== 黒板 大画面調整 ===== -->
+<div class="board-editor" id="board-editor">
+  <div class="board-editor-bar">
+    <span>📋 黒板の位置・大きさを調整</span>
+    <button class="board-editor-done" onclick="closeBoardEditor()">✔ 完了</button>
+  </div>
+  <div class="board-editor-stage-wrap">
+    <div class="board-editor-stage" id="board-editor-stage"></div>
+  </div>
+</div>
 
 <!-- ===== PHOTOBOOK SCREEN ===== -->
 <div class="screen" id="screen-photobook">
@@ -1178,6 +1254,7 @@ function renderPhotoBook() {
     const slotType = slot.type !== undefined ? slot.type : proj.type;
     const dateVal = slot.date ? slot.date.replace(/\//g,'-') : '';
     const memoVal = (slot.memo || '').replace(/"/g,'&quot;');
+    const workVal = (slot.work || '').replace(/"/g,'&quot;');
     const nameVal = slotName.replace(/"/g,'&quot;');
     const locationVal = slotLocation.replace(/"/g,'&quot;');
     return `
@@ -1191,6 +1268,7 @@ function renderPhotoBook() {
         ${slot.board ? `
         <div class="board-overlay" data-board-slot="${i}" style="left:${slot.board.x}%;top:${slot.board.y}%;width:${slot.board.w}%;">
           <button class="board-close no-print" onclick="event.stopPropagation();deleteBoard(${i})">✕</button>
+          <button class="board-zoom no-print" onclick="event.stopPropagation();openBoardEditor(${i})">⤢</button>
           <table class="board-table">${boardRowsHtml(slot, proj)}</table>
           <div class="board-resize"></div>
         </div>` : ''}
@@ -1199,6 +1277,10 @@ function renderPhotoBook() {
         <div class="info-row">
           <div class="info-label">工事名</div>
           <input class="info-input" type="text" data-slot="${i}" data-key="name" value="${nameVal}">
+        </div>
+        <div class="info-row">
+          <div class="info-label">作業名</div>
+          <input class="info-input" type="text" data-slot="${i}" data-key="work" placeholder="例：分電盤点検" value="${workVal}">
         </div>
         <div class="info-row">
           <div class="info-label">場所</div>
@@ -1220,8 +1302,8 @@ function renderPhotoBook() {
           <input class="info-input" type="date" data-slot="${i}" data-key="date" data-isdate="1" value="${dateVal}">
         </div>
         <div class="info-row">
-          <div class="info-label">説明・メモ</div>
-          <input class="info-input" type="text" data-slot="${i}" data-key="memo" placeholder="例：外壁ひび割れ箇所" value="${memoVal}">
+          <div class="info-label">会社名</div>
+          <input class="info-input" type="text" data-slot="${i}" data-key="memo" placeholder="例：〇〇電気工業" value="${memoVal}">
         </div>
       </div>
       <label class="blank-toggle no-print">
@@ -1252,7 +1334,7 @@ function renderPhotoBook() {
         }
       }
       updateSlot(idx, key, val);
-      if (['name', 'location', 'type', 'date', 'memo'].includes(key)) refreshBoard(idx);
+      if (['name', 'work', 'location', 'type', 'date', 'memo'].includes(key)) refreshBoard(idx);
     });
   });
   // 白紙チェックボックス
@@ -1514,6 +1596,7 @@ function deleteTemplate(tplId) {
 function boardValues(slot, proj) {
   return [
     slot.name !== undefined ? slot.name : proj.name,
+    slot.work || '',
     slot.location !== undefined ? slot.location : (proj.location || ''),
     slot.type !== undefined ? slot.type : proj.type,
     slot.date || '',
@@ -1522,7 +1605,7 @@ function boardValues(slot, proj) {
 }
 
 function boardRowsHtml(slot, proj) {
-  const labels = ['工事名', '場所', '点検種別', '撮影日', 'メモ'];
+  const labels = ['工事名', '作業名', '場所', '点検種別', '撮影日', '会社名'];
   const vals = boardValues(slot, proj);
   return labels.map((label, ri) =>
     `<tr><td class="board-label">${label}</td><td class="board-value" data-board-row="${ri}">${String(vals[ri] || '').replace(/</g, '&lt;')}</td></tr>`
@@ -1534,10 +1617,34 @@ function createBoard() {
   const proj = projects.find(p => p.id === currentProjectId);
   const slot = proj.slots[currentSlotIndex];
   if (slot.board) { toast('この枠にはすでに黒板があります'); return; }
-  slot.board = { x: 52, y: 52, w: 45 };
+  slot.board = { x: 55, y: 60, w: 42 };
   save();
   renderPhotoBook();
+  openBoardEditor(currentSlotIndex);
   toast('黒板を作成しました');
+}
+
+function openBoardEditor(index) {
+  const proj = projects.find(p => p.id === currentProjectId);
+  const slot = proj.slots[index];
+  if (!slot || !slot.board) return;
+  const stage = document.getElementById('board-editor-stage');
+  stage.innerHTML = `
+    ${slot.photo
+      ? `<img src="${slot.photo}" alt="写真">`
+      : `<div class="board-placeholder">写真はまだありません<br>（黒板の位置だけ先に決められます）</div>`}
+    <div class="board-overlay" data-board-slot="${index}" style="left:${slot.board.x}%;top:${slot.board.y}%;width:${slot.board.w}%;">
+      <table class="board-table">${boardRowsHtml(slot, proj)}</table>
+      <div class="board-resize"></div>
+    </div>`;
+  document.getElementById('board-editor').classList.add('open');
+  initBoardInteraction(stage.querySelector('.board-overlay'));
+}
+
+function closeBoardEditor() {
+  document.getElementById('board-editor').classList.remove('open');
+  document.getElementById('board-editor-stage').innerHTML = '';
+  renderPhotoBook();
 }
 
 function deleteBoard(index) {
@@ -1560,7 +1667,9 @@ function refreshBoard(index) {
 }
 
 function fitBoardFont(el) {
-  el.style.fontSize = Math.max(7, el.offsetWidth * 0.052) + 'px';
+  const w = el.offsetWidth;
+  if (!w) { requestAnimationFrame(() => fitBoardFont(el)); return; } // レイアウト前なら次フレームで再計算
+  el.style.fontSize = Math.max(7, w * 0.052) + 'px';
 }
 
 function initBoardInteraction(el) {
@@ -1572,7 +1681,7 @@ function initBoardInteraction(el) {
   el.addEventListener('click', e => e.stopPropagation());
 
   el.addEventListener('pointerdown', e => {
-    if (e.target.classList.contains('board-close')) return;
+    if (e.target.classList.contains('board-close') || e.target.classList.contains('board-zoom')) return;
     e.preventDefault();
     e.stopPropagation();
     mode = e.target.classList.contains('board-resize') ? 'resize' : 'move';
@@ -1584,6 +1693,7 @@ function initBoardInteraction(el) {
   el.addEventListener('pointermove', e => {
     if (!mode) return;
     const aw = area.clientWidth, ah = area.clientHeight;
+    if (!aw || !ah) return; // レイアウト未確定時は無視
     if (mode === 'move') {
       let nl = startL + (e.clientX - startX);
       let nt = startT + (e.clientY - startY);
@@ -1694,12 +1804,39 @@ document.getElementById('file-album').addEventListener('change', e => {
 });
 
 // ===== PRINT =====
+let printPrefs = { layout: 'landscape', skipBlanks: true };
+try {
+  const savedPrefs = JSON.parse(safeGetItem('photobook_print_prefs') || 'null');
+  if (savedPrefs && (savedPrefs.layout === 'landscape' || savedPrefs.layout === 'portrait')) {
+    printPrefs = { layout: savedPrefs.layout, skipBlanks: savedPrefs.skipBlanks !== false };
+  }
+} catch (e) {}
+
 function printBook() {
+  updatePrintChoiceUI();
   document.getElementById('modal-print-option').classList.add('open');
 }
 
-function execPrint(skipBlanks) {
+function setPrintLayout(layout) { printPrefs.layout = layout; updatePrintChoiceUI(); }
+function setPrintBlank(skip) { printPrefs.skipBlanks = skip; updatePrintChoiceUI(); }
+
+function updatePrintChoiceUI() {
+  document.getElementById('choice-layout-landscape').classList.toggle('selected', printPrefs.layout === 'landscape');
+  document.getElementById('choice-layout-portrait').classList.toggle('selected', printPrefs.layout === 'portrait');
+  document.getElementById('choice-blank-skip').classList.toggle('selected', printPrefs.skipBlanks === true);
+  document.getElementById('choice-blank-keep').classList.toggle('selected', printPrefs.skipBlanks === false);
+}
+
+function execPrintFromModal() {
+  safeSetItem('photobook_print_prefs', JSON.stringify(printPrefs));
+  execPrint(printPrefs.skipBlanks, printPrefs.layout);
+}
+
+function execPrint(skipBlanks, layout) {
   closeModal('modal-print-option');
+  const isPortrait = layout === 'portrait';
+  document.getElementById('print-page-style').textContent =
+    '@media print { @page { size: A4 ' + (isPortrait ? 'portrait' : 'landscape') + '; margin: 0; } }';
   const proj = projects.find(p => p.id === currentProjectId);
   const area = document.getElementById('print-area');
 
@@ -1718,7 +1855,10 @@ function execPrint(skipBlanks) {
     const pageSlots = slots.slice(page * 4, page * 4 + 4);
     while (pageSlots.length < 4) pageSlots.push(null);
 
-    pagesHtml += `<div style="box-sizing:border-box;display:grid;grid-template-rows:1fr 1fr;grid-template-columns:1fr 1fr;gap:4mm;width:297mm;height:210mm;padding:10mm;overflow:hidden;${page > 0 ? 'page-break-before:always;' : ''}">`;
+    const gridStyle = isPortrait
+      ? 'grid-template-rows:repeat(4,1fr);grid-template-columns:1fr;width:210mm;height:297mm;'
+      : 'grid-template-rows:1fr 1fr;grid-template-columns:1fr 1fr;width:297mm;height:210mm;';
+    pagesHtml += `<div style="box-sizing:border-box;display:grid;${gridStyle}gap:4mm;padding:10mm;overflow:hidden;${page > 0 ? 'page-break-before:always;' : ''}">`;
 
     pageSlots.forEach(slot => {
       if (!slot) {
@@ -1726,6 +1866,7 @@ function execPrint(skipBlanks) {
         return;
       }
       const name     = slot.name     || proj.name     || '';
+      const work     = slot.work     || '';
       const location = slot.location || proj.location || '';
       const type     = slot.type     || proj.type     || '';
       const date     = slot.date     || '';
@@ -1737,7 +1878,7 @@ function execPrint(skipBlanks) {
               ? `<img src="${slot.photo}" alt="写真">`
               : `<div class="print-slot-photo-empty">写真なし</div>`}
             ${slot.board ? `
-            <div class="print-board" style="left:${slot.board.x}%;top:${slot.board.y}%;width:${slot.board.w}%;font-size:${(75 * slot.board.w / 100 * 0.052).toFixed(2)}mm;">
+            <div class="print-board" style="left:${slot.board.x}%;top:${slot.board.y}%;width:${slot.board.w}%;font-size:${((isPortrait ? 104 : 75) * slot.board.w / 100 * 0.052).toFixed(2)}mm;">
               <table class="board-table">${boardRowsHtml(slot, proj)}</table>
             </div>` : ''}
           </div>
@@ -1745,6 +1886,10 @@ function execPrint(skipBlanks) {
             <div class="print-slot-info-row">
               <div class="print-slot-info-label">工事名</div>
               <div class="print-slot-info-value">${name}</div>
+            </div>
+            <div class="print-slot-info-row">
+              <div class="print-slot-info-label">作業名</div>
+              <div class="print-slot-info-value">${work}</div>
             </div>
             <div class="print-slot-info-row">
               <div class="print-slot-info-label">場所</div>
@@ -1759,7 +1904,7 @@ function execPrint(skipBlanks) {
               <div class="print-slot-info-value">${date}</div>
             </div>
             <div class="print-slot-info-row">
-              <div class="print-slot-info-label">説明・メモ</div>
+              <div class="print-slot-info-label">会社名</div>
               <div class="print-slot-info-value">${memo}</div>
             </div>
           </div>
@@ -1769,20 +1914,29 @@ function execPrint(skipBlanks) {
   }
 
   area.innerHTML = pagesHtml;
-  // DOMが確実に描画されてから印刷
-  setTimeout(() => {
-    const scrollY = window.scrollY;
-    window.print();
-    // 印刷後にprint-areaをクリアしスクロール位置を復元
-    area.innerHTML = '';
-    window.scrollTo(0, scrollY);
-  }, 100);
+  // 写真の読み込みが終わってから印刷する（スマホで真っ白になるのを防ぐため、
+  // 印刷内容は消さずに残す。print-areaは画面ではdisplay:noneで見えない）
+  const pendingImgs = Array.from(area.querySelectorAll('img')).filter(img => !img.complete);
+  let printStarted = false;
+  const doPrint = () => {
+    if (printStarted) return;
+    printStarted = true;
+    setTimeout(() => window.print(), 100);
+  };
+  if (pendingImgs.length === 0) {
+    doPrint();
+  } else {
+    let remaining = pendingImgs.length;
+    const onDone = () => { if (--remaining <= 0) doPrint(); };
+    pendingImgs.forEach(img => {
+      img.addEventListener('load', onDone, { once: true });
+      img.addEventListener('error', onDone, { once: true });
+    });
+    setTimeout(doPrint, 1500); // 読み込みが遅くても最大1.5秒後には印刷へ（保険）
+  }
 }
 
 // ===== OVERLAY CLOSE =====
-window.addEventListener('afterprint', () => {
-  document.getElementById('print-area').innerHTML = '';
-});
 document.querySelectorAll('.modal-overlay').forEach(el => {
   el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); });
 });
