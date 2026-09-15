@@ -13,7 +13,10 @@ const PRECACHE = [
 // インストール時にアプリ本体をキャッシュ
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE))
+    // addAll は1ファイルでも取得に失敗すると全体が失敗するため、個別に登録する
+    caches.open(CACHE_NAME).then((cache) =>
+      Promise.all(PRECACHE.map((url) => cache.add(url).catch(() => null)))
+    )
   );
   self.skipWaiting();
 });
