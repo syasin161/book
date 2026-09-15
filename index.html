@@ -176,7 +176,19 @@
     font-size: 14px; cursor: pointer;
     font-family: 'Noto Sans JP', sans-serif;
   }
-  .photobook-title { font-size: 15px; font-weight: 700; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .photobook-title {
+    font-size: 15px; font-weight: 700; flex: 1; min-width: 0;
+    margin: 0 8px; padding: 6px 8px;
+    color: #ffffff;
+    background: rgba(255,255,255,0.10);
+    border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 8px;
+    font-family: 'Noto Sans JP', sans-serif;
+    outline: none;
+    text-overflow: ellipsis;
+  }
+  .photobook-title:focus { background: rgba(255,255,255,0.20); border-color: rgba(255,255,255,0.6); }
+  .photobook-title::placeholder { color: rgba(255,255,255,0.5); font-weight: 500; }
 
   .photobook-pad { padding: 16px 14px 100px; }
 
@@ -863,7 +875,7 @@
   <div class="app-header">
     <div class="header-row">
       <button class="btn-back" onclick="goHome()">← 戻る</button>
-      <span class="photobook-title" id="pb-title">写真帳</span>
+      <input class="photobook-title" id="pb-title" type="text" placeholder="写真帳の名前" onchange="renameProject(this.value)">
       <button class="btn-icon accent no-print" onclick="printBook()">🖨 印刷</button>
     </div>
   </div>
@@ -991,8 +1003,14 @@
   <div class="modal">
     <div class="modal-title">新しい工事を追加</div>
     <div class="modal-field">
+      <div class="modal-label">写真帳の名前</div>
+      <input class="modal-input" id="input-title" type="text" placeholder="例：○○ビル定期点検_9月">
+      <div style="font-size:11px;color:var(--text-sub);margin-top:5px;">工事一覧と見出しに表示されます（空欄なら工事名を使います）</div>
+    </div>
+    <div class="modal-field">
       <div class="modal-label">工事名</div>
       <input class="modal-input" id="input-name" type="text" placeholder="例：○○ビル定期点検">
+      <div style="font-size:11px;color:var(--text-sub);margin-top:5px;">各写真枠と黒板に入る工事名です</div>
     </div>
     <div class="modal-field">
       <div class="modal-label">場所</div>
@@ -1110,7 +1128,7 @@
   <div class="modal">
     <div class="modal-title">新しいファイルとして保存</div>
     <div class="modal-field">
-      <div class="modal-label">ファイル名（工事名）</div>
+      <div class="modal-label">写真帳の名前</div>
       <input class="modal-input" id="input-newfile-name" type="text" placeholder="例：○○ビル定期点検_5月">
     </div>
     <div class="modal-btns">
@@ -1218,6 +1236,9 @@ try { defaults = JSON.parse(safeGetItem('photobook_defaults') || '{}') || {}; } 
 
 // ===== UTILS =====
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
+// 一覧・見出しに出す名前（写真枠の工事名とは別に持つ）
+function projLabel(p) { return (p && (p.title || p.name)) || '(名前なし)'; }
+
 function escHtml(v) {
   return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
@@ -1252,6 +1273,7 @@ function toast(msg) {
 
 // ===== MODALS =====
 function showAddProject() {
+  document.getElementById('input-title').value = '';
   document.getElementById('input-name').value = defaults.projName || '';
   document.getElementById('input-location').value = '';
   document.getElementById('input-type').value = '';
@@ -1277,6 +1299,7 @@ function closeModal(id) { document.getElementById(id).classList.remove('open'); 
 
 // ===== PROJECT MANAGEMENT =====
 function addProject() {
+  const title = document.getElementById('input-title').value.trim();
   const name = document.getElementById('input-name').value.trim();
   const location = document.getElementById('input-location').value.trim();
   const typeRaw = document.getElementById('input-type').value;
@@ -1286,7 +1309,7 @@ function addProject() {
   const person = dateVal ? dateVal.replace(/-/g, '/') : today();
   if (!name) { toast('⚠️ 工事名を入力してください'); return; }
   if (!type) { toast('⚠️ 点検種別を選択してください'); return; }
-  const proj = { id: uid(), name, location, type, person, slots: [], createdAt: today() };
+  const proj = { id: uid(), title: title || name, name, location, type, person, slots: [], createdAt: today() };
   for (let i = 0; i < 4; i++) proj.slots.push({ id: uid(), photo: null, date: person, memo: defaults.company || '', work: '', name, location, type });
   projects.unshift(proj);
   save();
@@ -1320,7 +1343,7 @@ function renderHome() {
       <div class="project-check">✓</div>
       <div class="project-icon">🏗️</div>
       <div class="project-info">
-        <div class="project-name">${p.name}</div>
+        <div class="project-name">${escHtml(projLabel(p))}</div>
         <div class="project-meta">${p.type}　${p.person ? '日付：' + p.person : ''}　作成：${p.createdAt}</div>
       </div>
       <div class="project-badge">${photoCount}枚</div>
@@ -1379,12 +1402,28 @@ function openProject(id) {
   currentProjectId = id;
   const proj = projects.find(p => p.id === id);
   projectSnapshot = JSON.stringify(proj);
-  document.getElementById('pb-title').textContent = proj.name;
+  document.getElementById('pb-title').value = projLabel(proj);
   document.getElementById('print-title').textContent = '写　真　帳';
   document.getElementById('print-sub').textContent = `工事名：${proj.name}　点検種別：${proj.type}${proj.person ? '　担当：' + proj.person : ''}`;
   document.getElementById('screen-home').classList.remove('active');
   document.getElementById('screen-photobook').classList.add('active');
   renderPhotoBook();
+}
+
+// 戻るボタンの隣の名前を編集したとき。写真枠の工事名は変えない
+function renameProject(value) {
+  const proj = projects.find(p => p.id === currentProjectId);
+  if (!proj) return;
+  const title = String(value || '').trim();
+  if (!title) {   // 空にはできない
+    document.getElementById('pb-title').value = projLabel(proj);
+    toast('⚠️ 名前は空にできません');
+    return;
+  }
+  proj.title = title;
+  save();
+  renderHome();
+  toast('名前を変更しました');
 }
 
 function goHome() {
@@ -1590,7 +1629,7 @@ function showSaveMenu() {
 function saveAsTemplate() {
   closeModal('modal-save');
   const proj = projects.find(p => p.id === currentProjectId);
-  document.getElementById('input-tpl-name').value = proj.name + 'のテンプレート';
+  document.getElementById('input-tpl-name').value = projLabel(proj) + 'のテンプレート';
   document.getElementById('modal-save-template').classList.add('open');
 }
 
@@ -1616,7 +1655,7 @@ function execSaveAsTemplate() {
 function saveAsNewFile() {
   closeModal('modal-save');
   const proj = projects.find(p => p.id === currentProjectId);
-  document.getElementById('input-newfile-name').value = proj.name + '_コピー';
+  document.getElementById('input-newfile-name').value = projLabel(proj) + '_コピー';
   document.getElementById('modal-save-newfile').classList.add('open');
 }
 
@@ -1626,7 +1665,7 @@ function execSaveAsNewFile() {
   const proj = projects.find(p => p.id === currentProjectId);
   const newProj = JSON.parse(JSON.stringify(proj));
   newProj.id = uid();
-  newProj.name = newName;
+  newProj.title = newName;      // 写真枠の工事名はそのまま残す
   newProj.createdAt = today();
   projects.unshift(newProj);
   save();
@@ -1647,7 +1686,7 @@ function showOverwriteSelect() {
       <div class="file-list-item" onclick="execOverwrite('${p.id}')">
         <span style="font-size:20px">📁</span>
         <div>
-          <div class="file-list-item-name">${p.name}</div>
+          <div class="file-list-item-name">${escHtml(projLabel(p))}</div>
           <div class="file-list-item-meta">${p.type}　${p.createdAt}</div>
         </div>
       </div>`).join('');
@@ -1660,6 +1699,7 @@ function execOverwrite(targetId) {
   const targetIdx = projects.findIndex(p => p.id === targetId);
   const merged = JSON.parse(JSON.stringify(src));
   merged.id = targetId;
+  merged.title = projects[targetIdx].title || projects[targetIdx].name;
   merged.name = projects[targetIdx].name;
   merged.createdAt = projects[targetIdx].createdAt;
   projects[targetIdx] = merged;
@@ -1843,7 +1883,7 @@ function createFromTemplate(tplId) {
   const tpl = templates.find(t => t.id === tplId);
   const pname = tpl.projName || defaults.projName || '';
   const proj = {
-    id: uid(), name: pname, type: tpl.type,
+    id: uid(), title: tpl.name || pname, name: pname, type: tpl.type,
     person: today(), slots: [], createdAt: today()
   };
   if (tpl.rows && tpl.rows.length) {
