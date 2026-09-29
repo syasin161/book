@@ -154,6 +154,59 @@
   }
   .btn-add-project:active { background: var(--navy-light); }
 
+  .storage-bar { margin-bottom: 14px; }
+  .storage-text { font-size: 11px; color: var(--text-sub); margin-bottom: 5px; font-weight: 500; }
+  .storage-track {
+    height: 6px; border-radius: 3px; background: var(--border); overflow: hidden;
+  }
+  .storage-fill {
+    height: 100%; width: 0; border-radius: 3px;
+    background: var(--blue); transition: width 0.3s;
+  }
+  .storage-fill.warn { background: #e8a020; }
+  .storage-fill.danger { background: #c0392b; }
+  .btn-archive-toggle {
+    border: 1.5px solid var(--border);
+    background: var(--card); color: var(--text-sub);
+    border-radius: 999px; padding: 4px 11px;
+    font-size: 11px; font-weight: 700; letter-spacing: 0;
+    text-transform: none; cursor: pointer;
+    font-family: 'Noto Sans JP', sans-serif;
+  }
+  .btn-archive-toggle.on { background: var(--navy); color: #fff; border-color: var(--navy); }
+  .btn-archive {
+    flex: 1; background: #1f6e43; color: #fff;
+    border: none; border-radius: 12px; padding: 14px;
+    font-size: 14px; font-weight: 700;
+    font-family: 'Noto Sans JP', sans-serif; cursor: pointer;
+  }
+  .btn-archive:disabled { background: var(--border); color: var(--text-sub); }
+  .project-card.archived { opacity: 0.72; }
+  .home-search {
+    width: 100%;
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-size: 13px;
+    font-family: 'Noto Sans JP', sans-serif;
+    color: var(--text);
+    background: var(--card);
+    outline: none;
+    margin-bottom: 14px;
+    -webkit-appearance: none;
+  }
+  .home-search:focus { border-color: var(--blue-light); }
+  .ym-head {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 12px; font-weight: 700; color: var(--text-sub);
+    margin: 18px 0 8px;
+  }
+  .ym-head::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+  .ym-head:first-child { margin-top: 0; }
+  .list-note {
+    text-align: center; color: var(--text-sub);
+    padding: 26px 0; font-size: 13px; line-height: 1.7;
+  }
   .empty-state {
     text-align: center;
     padding: 60px 20px;
@@ -290,6 +343,64 @@
     box-shadow: 0 -2px 12px rgba(26,39,68,0.08);
     z-index: 100;
   }
+  .btn-icon-only {
+    flex: 0 0 52px;
+    background: var(--bg); color: var(--text);
+    border: 1.5px solid var(--border);
+    border-radius: 12px; padding: 14px 0;
+    font-size: 16px; cursor: pointer;
+    font-family: 'Noto Sans JP', sans-serif;
+    transition: all 0.2s;
+  }
+  .btn-icon-only.active { background: var(--navy); color: #fff; border-color: var(--navy); }
+
+  /* ===== 並べ替えモード ===== */
+  /* 並べ替え中は入力欄を隠して小さく並べる（縦に長いと移動先が見えないため） */
+  body.reorder-mode .photo-area { pointer-events: none; }
+  body.reorder-mode .photo-info,
+  body.reorder-mode .blank-toggle { display: none; }
+  body.reorder-mode .board-close,
+  body.reorder-mode .board-zoom,
+  body.reorder-mode .board-resize { display: none; }
+  body.reorder-mode .board-overlay { pointer-events: none; }
+  body.reorder-mode .photo-overlay {
+    font-size: 12px; font-weight: 700; padding: 4px 9px;
+  }
+  body.reorder-mode .photo-slot {
+    cursor: grab; touch-action: none;
+    border-style: solid; border-color: var(--blue-light);
+  }
+  body.reorder-mode .photo-slot::before {
+    content: '⇅ ドラッグ';
+    position: absolute; top: 6px; left: 6px; z-index: 8;
+    background: rgba(26,39,68,0.82); color: #fff;
+    font-size: 10px; font-weight: 700;
+    padding: 3px 7px; border-radius: 6px;
+    pointer-events: none;
+  }
+  body.reorder-mode .photo-slot { position: relative; }
+  .photo-slot.dragging {
+    z-index: 200; opacity: 0.92;
+    box-shadow: 0 10px 24px rgba(26,39,68,0.35);
+    pointer-events: none;
+  }
+  .photo-slot.drop-before::after,
+  .photo-slot.drop-after::after {
+    content: ''; position: absolute; top: 0; bottom: 0;
+    width: 6px; background: var(--blue); z-index: 9;
+    pointer-events: none;
+  }
+  .photo-slot.drop-before::after { left: 0; }
+  .photo-slot.drop-after::after { right: 0; }
+  .reorder-hint {
+    position: fixed; bottom: 78px; left: 16px; right: 16px;
+    background: var(--navy); color: #fff;
+    font-size: 12px; text-align: center;
+    padding: 9px; border-radius: 10px; z-index: 99;
+    display: none;
+  }
+  body.reorder-mode .reorder-hint { display: block; }
+
   .btn-primary {
     flex: 1;
     background: var(--navy);
@@ -436,7 +547,10 @@
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
     }
-    .print-board .board-table { width: 100%; height: 100%; border-collapse: collapse; table-layout: fixed; }
+    .print-board .board-table {
+      position: absolute; left: 0; top: 0;
+      width: 100%; height: 100%; border-collapse: collapse; table-layout: fixed;
+    }
     .print-board .board-table tr { height: 14%; }
     .print-board .board-table tr:nth-child(2) { height: 30%; }
     .print-board .board-table td {
@@ -488,6 +602,8 @@
       white-space: nowrap;
       text-overflow: ellipsis;
     }
+    .print-slot-info.board-side { gap: 4mm; }
+    .print-slot-info.board-side .print-slot-info-value { font-size: 9pt; }
     .print-slot-info-value.multiline {
       white-space: pre-wrap; overflow: visible; text-overflow: clip;
       word-break: break-word;
@@ -708,6 +824,7 @@
     cursor: move;
   }
   .board-table {
+    position: absolute; left: 0; top: 0;   /* 中身が多くても黒板の高さを変えない */
     width: 100%; height: 100%;
     border-collapse: collapse; table-layout: fixed;
   }
@@ -816,7 +933,18 @@
     <div style="display:flex;gap:10px;margin-bottom:20px;">
       <button class="btn-template-action" onclick="showExcelMenu()">📊 Excelから読み込む／雛形を書き出す</button>
     </div>
-    <div class="section-label" style="margin-bottom:14px;">工事一覧</div>
+    <div class="section-label" style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
+      <span id="home-list-title">工事一覧</span>
+      <span style="display:flex;align-items:center;gap:8px;">
+        <span id="home-count" style="font-weight:500;letter-spacing:0.04em;text-transform:none;"></span>
+        <button class="btn-archive-toggle" id="btn-archive-toggle" onclick="toggleArchivedView()" style="display:none;"></button>
+      </span>
+    </div>
+    <div class="storage-bar" id="storage-bar" style="display:none;">
+      <div class="storage-text" id="storage-text"></div>
+      <div class="storage-track"><div class="storage-fill" id="storage-fill"></div></div>
+    </div>
+    <input class="home-search" id="home-search" type="search" placeholder="🔍 名前・場所・種別で絞り込む" oninput="renderHome()">
     <div id="project-list"></div>
     <div id="empty-state" class="empty-state" style="display:none;">
       <div class="icon">🏗️</div>
@@ -826,12 +954,13 @@
       <button class="btn-add-project" style="flex:2;margin-top:0;" onclick="showAddProject()">
         ＋ 新しい工事を追加
       </button>
-      <button class="btn-delete-mode" id="btn-home-delete-mode" style="flex:1;" onclick="toggleHomeDeleteMode()">🗑 削除モード</button>
+      <button class="btn-delete-mode" id="btn-home-delete-mode" style="flex:1;" onclick="toggleHomeDeleteMode()">☑️ 選択</button>
     </div>
   </div>
   <div class="delete-bar" id="home-delete-bar" style="display:none;">
     <button class="btn-cancel-delete" onclick="toggleHomeDeleteMode()">キャンセル</button>
-    <button class="btn-exec-delete" id="btn-home-exec-delete" onclick="execHomeDelete()" disabled>削除する（0件）</button>
+    <button class="btn-archive" id="btn-home-archive" onclick="execArchive()" disabled>完了にする（0件）</button>
+    <button class="btn-exec-delete" id="btn-home-exec-delete" onclick="execHomeDelete()" disabled>削除（0件）</button>
   </div>
 </div>
 
@@ -886,14 +1015,47 @@
     <div class="photo-grid" id="photo-grid"></div>
   </div>
 
+  <div class="reorder-hint no-print">移動先へドラッグ。青い帯の位置に入ります</div>
   <div class="bottom-bar no-print normal-bar">
-    <button class="btn-secondary" onclick="addPhotoSlot()">＋ 写真枠を追加</button>
-    <button class="btn-delete-mode" id="btn-delete-mode" onclick="toggleDeleteMode()">🗑 削除モード</button>
+    <button class="btn-secondary" onclick="showAddSlotMenu()">＋ 写真枠</button>
+    <button class="btn-icon-only" id="btn-reorder-mode" onclick="toggleReorderMode()" title="並べ替え">⇅</button>
+    <button class="btn-delete-mode" id="btn-delete-mode" onclick="toggleDeleteMode()">🗑 削除</button>
     <button class="btn-primary" onclick="showSaveMenu()">💾 保存</button>
   </div>
   <div class="delete-bar no-print">
     <button class="btn-cancel-delete" onclick="toggleDeleteMode()">キャンセル</button>
     <button class="btn-exec-delete" id="btn-exec-delete" onclick="execDelete()" disabled>削除する（0件）</button>
+  </div>
+</div>
+
+<!-- ===== ADD SLOT MENU ===== -->
+<div class="modal-overlay" id="modal-addslot">
+  <div class="modal">
+    <div class="modal-title">写真枠を追加</div>
+    <div class="save-option" onclick="addPhotoSlot()">
+      <span class="save-option-icon">📄</span>
+      <div class="save-option-text">
+        <strong>通常（空の枠）</strong>
+        <span>工事名・場所などは今の写真帳から引き継ぎます</span>
+      </div>
+    </div>
+    <div class="save-option" onclick="showCopySlotSelect()">
+      <span class="save-option-icon">📋</span>
+      <div class="save-option-text">
+        <strong>コピー（枠を選ぶ）</strong>
+        <span>選んだ枠の入力内容と黒板を引き継ぎます（写真は空）</span>
+      </div>
+    </div>
+    <button class="modal-btn-cancel" style="width:100%;margin-top:8px" onclick="closeModal('modal-addslot')">キャンセル</button>
+  </div>
+</div>
+
+<!-- ===== COPY SLOT SELECT ===== -->
+<div class="modal-overlay" id="modal-copyslot">
+  <div class="modal">
+    <div class="modal-title">コピー元の枠を選ぶ</div>
+    <div id="copyslot-list"></div>
+    <button class="modal-btn-cancel" style="width:100%;margin-top:8px" onclick="closeModal('modal-copyslot')">キャンセル</button>
   </div>
 </div>
 
@@ -1017,7 +1179,7 @@
       <input class="modal-input" id="input-location" type="text" placeholder="例：3階 電気室">
     </div>
     <div class="modal-field">
-      <div class="modal-label">点検種別</div>
+      <div class="modal-label">種別</div>
       <select class="modal-select" id="input-type" onchange="toggleOtherInput('input-type-other', this.value)">
         <option value="">選択してください</option>
         <option>2週間点検</option>
@@ -1028,7 +1190,7 @@
         <option>2年点検</option>
         <option>その他</option>
       </select>
-      <input class="modal-input" id="input-type-other" type="text" placeholder="点検種別を入力" style="margin-top:8px;display:none;">
+      <input class="modal-input" id="input-type-other" type="text" placeholder="種別を入力" style="margin-top:8px;display:none;">
     </div>
     <div class="modal-field">
       <div class="modal-label">日付</div>
@@ -1087,7 +1249,7 @@
       <span class="save-option-icon">📋</span>
       <div class="save-option-text">
         <strong>テンプレートとして保存</strong>
-        <span>工事名・点検種別・写真枠数を保存</span>
+        <span>工事名・種別・写真枠数を保存</span>
       </div>
     </div>
     <div class="save-option" onclick="saveAsNewFile()">
@@ -1179,7 +1341,7 @@
       <input class="modal-input" id="edit-tpl-projname" type="text">
     </div>
     <div class="modal-field">
-      <div class="modal-label">点検種別（初期値）</div>
+      <div class="modal-label">種別（初期値）</div>
       <select class="modal-select" id="edit-tpl-type" onchange="toggleOtherInput('edit-tpl-type-other', this.value)">
         <option value="">選択してください</option>
         <option>2週間点検</option>
@@ -1190,7 +1352,7 @@
         <option>2年点検</option>
         <option>その他</option>
       </select>
-      <input class="modal-input" id="edit-tpl-type-other" type="text" placeholder="点検種別を入力" style="margin-top:8px;display:none;">
+      <input class="modal-input" id="edit-tpl-type-other" type="text" placeholder="種別を入力" style="margin-top:8px;display:none;">
     </div>
     <div class="modal-field">
       <div class="modal-label">写真枠の数</div>
@@ -1226,13 +1388,27 @@ break;case"<bookViews":;case"<bookViews>":;case"</bookViews>":break;case"<workbo
 function safeGetItem(key) {
   try { return localStorage.getItem(key); } catch (err) { return null; }
 }
-let projects = JSON.parse(safeGetItem('photobook_projects') || '[]');
-let templates = JSON.parse(safeGetItem('photobook_templates') || '[]');
+// 保存データが壊れていてもアプリが起動できるように、必ず安全な値へ落とす
+function loadJson(key, fallback) {
+  try {
+    const v = JSON.parse(safeGetItem(key) || 'null');
+    return (v === null || v === undefined) ? fallback : v;
+  } catch (e) {
+    return fallback;
+  }
+}
+let projects = loadJson('photobook_projects', []);
+let templates = loadJson('photobook_templates', []);
+if (!Array.isArray(projects)) projects = [];
+if (!Array.isArray(templates)) templates = [];
+projects = projects.filter(p => p && typeof p === 'object');
+projects.forEach(p => { if (!Array.isArray(p.slots)) p.slots = []; });
+templates = templates.filter(t => t && typeof t === 'object');
 let currentProjectId = null;
 let currentSlotIndex = null;
 let projectSnapshot = null;   // 写真帳を開いた時点の状態（「保存せずに戻る」で復元する）
-let defaults = {};            // 会社名・工事名・印刷の向きの初期値
-try { defaults = JSON.parse(safeGetItem('photobook_defaults') || '{}') || {}; } catch (e) { defaults = {}; }
+let defaults = loadJson('photobook_defaults', {});   // 会社名・工事名・印刷の向きの初期値
+if (!defaults || typeof defaults !== 'object') defaults = {};
 
 // ===== UTILS =====
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
@@ -1242,6 +1418,8 @@ function projLabel(p) { return (p && (p.title || p.name)) || '(名前なし)'; }
 function escHtml(v) {
   return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
+// HTMLの属性（value="..."）に入れる用
+function escAttr(v) { return escHtml(v).replace(/"/g, '&quot;'); }
 function today() {
   const d = new Date();
   return `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;
@@ -1258,8 +1436,153 @@ function safeSetItem(key, value) {
     }
   }
 }
+// ===== 写真の保存先（IndexedDB）=====
+// localStorage は約5MBしかないため、写真だけ容量の大きい IndexedDB に置く。
+// localStorage には写真以外のデータと、写真の置き場所を指すID（photoId）だけを残す。
+const PHOTO_DB = 'photobook_db', PHOTO_STORE = 'photos';
+let photoDB = null;
+let usingIdb = false;
+
+function openPhotoDB() {
+  return new Promise(resolve => {
+    if (photoDB) return resolve(photoDB);
+    if (!window.indexedDB) return resolve(null);
+    let req;
+    try { req = indexedDB.open(PHOTO_DB, 1); } catch (e) { return resolve(null); }
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains(PHOTO_STORE)) db.createObjectStore(PHOTO_STORE);
+    };
+    req.onsuccess = () => { photoDB = req.result; resolve(photoDB); };
+    req.onerror = () => resolve(null);
+    req.onblocked = () => resolve(null);
+  });
+}
+
+function idbPut(key, value) {
+  return openPhotoDB().then(db => new Promise((resolve, reject) => {
+    if (!db) return reject(new Error('IndexedDBが使えません'));
+    let tx;
+    try { tx = db.transaction(PHOTO_STORE, 'readwrite'); } catch (e) { return reject(e); }
+    tx.objectStore(PHOTO_STORE).put(value, key);
+    tx.oncomplete = () => resolve(true);
+    tx.onerror = () => reject(tx.error || new Error('保存に失敗'));
+    tx.onabort = () => reject(tx.error || new Error('保存が中断されました'));
+  }));
+}
+
+function idbGet(key) {
+  return openPhotoDB().then(db => new Promise(resolve => {
+    if (!db) return resolve(null);
+    let tx;
+    try { tx = db.transaction(PHOTO_STORE, 'readonly'); } catch (e) { return resolve(null); }
+    const r = tx.objectStore(PHOTO_STORE).get(key);
+    r.onsuccess = () => resolve(r.result || null);
+    r.onerror = () => resolve(null);
+  }));
+}
+
+function idbAllKeys() {
+  return openPhotoDB().then(db => new Promise(resolve => {
+    if (!db) return resolve([]);
+    let tx;
+    try { tx = db.transaction(PHOTO_STORE, 'readonly'); } catch (e) { return resolve([]); }
+    const r = tx.objectStore(PHOTO_STORE).getAllKeys();
+    r.onsuccess = () => resolve(r.result || []);
+    r.onerror = () => resolve([]);
+  }));
+}
+
+function idbDelete(key) {
+  return openPhotoDB().then(db => new Promise(resolve => {
+    if (!db) return resolve(false);
+    let tx;
+    try { tx = db.transaction(PHOTO_STORE, 'readwrite'); } catch (e) { return resolve(false); }
+    tx.objectStore(PHOTO_STORE).delete(key);
+    tx.oncomplete = () => resolve(true);
+    tx.onerror = () => resolve(false);
+  }));
+}
+
+// localStorage に書くときは写真本体を外す。
+// ただし IndexedDB への保存に失敗した写真（photoIdがない）は、消えないよう残す。
+function stripPhotos(key, value) {
+  if (key !== 'photo') return value;
+  return (this && this.photoId) ? undefined : value;
+}
+
+// 使われていない写真をIndexedDBから消す
+function gcPhotos() {
+  if (!usingIdb) return;
+  const used = {};
+  projects.forEach(p => p.slots.forEach(s => { if (s.photoId) used[s.photoId] = 1; }));
+  idbAllKeys().then(keys => keys.forEach(k => { if (!used[k]) idbDelete(k); }));
+}
+
+// 写真をIndexedDBから読み戻す
+function hydrateProject(p) {
+  if (!usingIdb || !p) return Promise.resolve();
+  const tasks = [];
+  p.slots.forEach(s => {
+    if (!s.photo && s.photoId) tasks.push(idbGet(s.photoId).then(v => { if (v) s.photo = v; }));
+  });
+  return Promise.all(tasks);
+}
+
+// 起動時：旧データの写真をIndexedDBへ移し、保存済みの写真を読み戻す
+function initPhotoStorage() {
+  return openPhotoDB().then(db => {
+    if (!db) { updateStorageInfo(); return; }
+    usingIdb = true;
+    const tasks = [];
+    let moved = 0;
+    projects.forEach(p => p.slots.forEach(slot => {
+      if (slot.photo && !slot.photoId) {
+        const pid = uid();
+        moved++;
+        tasks.push(idbPut(pid, slot.photo).then(() => { slot.photoId = pid; }).catch(() => {}));
+      } else if (!slot.photo && slot.photoId) {
+        tasks.push(idbGet(slot.photoId).then(v => { if (v) slot.photo = v; }));
+      }
+    }));
+    return Promise.all(tasks).then(() => {
+      save();
+      renderHome();
+      if (currentProjectId) renderPhotoBook();
+      if (moved) toast(`写真${moved}枚を大容量の保存先へ移しました`);
+    });
+  }).catch(() => {});
+}
+
+// 保存容量の表示
+function updateStorageInfo() {
+  const bar = document.getElementById('storage-bar');
+  if (!bar) return;
+  let photoCount = 0;
+  projects.forEach(p => p.slots.forEach(s => { if (s.photo || s.photoId) photoCount++; }));
+  const paint = (usedMB, quotaMB) => {
+    const pct = quotaMB > 0 ? Math.min(100, usedMB / quotaMB * 100) : 0;
+    const fill = document.getElementById('storage-fill');
+    bar.style.display = 'block';
+    fill.style.width = Math.max(1.5, pct).toFixed(1) + '%';
+    fill.className = 'storage-fill' + (pct >= 85 ? ' danger' : (pct >= 60 ? ' warn' : ''));
+    document.getElementById('storage-text').textContent =
+      `📦 写真${photoCount}枚　${usedMB.toFixed(1)}MB / ${quotaMB >= 1024 ? (quotaMB / 1024).toFixed(1) + 'GB' : quotaMB.toFixed(0) + 'MB'}（${pct.toFixed(1)}%）`;
+  };
+  if (usingIdb && navigator.storage && navigator.storage.estimate) {
+    navigator.storage.estimate().then(e => {
+      if (!e || !e.quota) return;
+      paint((e.usage || 0) / 1048576, e.quota / 1048576);
+    }).catch(() => {});
+  } else {
+    let bytes = 0;
+    try { bytes = (safeGetItem('photobook_projects') || '').length; } catch (err) {}
+    paint(bytes / 1048576, 5);   // localStorage しか使えないときの目安
+  }
+}
+
 function save() {
-  safeSetItem('photobook_projects', JSON.stringify(projects));
+  safeSetItem('photobook_projects', JSON.stringify(projects, usingIdb ? stripPhotos : null));
 }
 function saveTemplates() {
   safeSetItem('photobook_templates', JSON.stringify(templates));
@@ -1308,7 +1631,7 @@ function addProject() {
   const dateVal = document.getElementById('input-person').value;
   const person = dateVal ? dateVal.replace(/-/g, '/') : today();
   if (!name) { toast('⚠️ 工事名を入力してください'); return; }
-  if (!type) { toast('⚠️ 点検種別を選択してください'); return; }
+  if (!type) { toast('⚠️ 種別を選択してください'); return; }
   const proj = { id: uid(), title: title || name, name, location, type, person, slots: [], createdAt: today() };
   for (let i = 0; i < 4; i++) proj.slots.push({ id: uid(), photo: null, date: person, memo: defaults.company || '', work: '', name, location, type });
   projects.unshift(proj);
@@ -1322,39 +1645,121 @@ function addProject() {
 function deleteProject(id) {
   projects = projects.filter(p => p.id !== id);
   save();
+  gcPhotos();
   renderHome();
   toast('削除しました');
 }
 
 // ===== HOME RENDER =====
-function renderHome() {
-  const list = document.getElementById('project-list');
-  const empty = document.getElementById('empty-state');
-  if (projects.length === 0) {
-    list.innerHTML = '';
-    empty.style.display = 'block';
-    return;
-  }
-  empty.style.display = 'none';
-  list.innerHTML = projects.map(p => {
-    const photoCount = p.slots.filter(s => s.photo).length;
-    return `
-    <div class="project-card" data-project-id="${p.id}" onclick="onProjectClick(event, '${p.id}')">
+// 検索に引っかかるか（名前・工事名・場所・種別・日付）
+function matchProject(p, q) {
+  return [p.title, p.name, p.location, p.type, p.person]
+    .some(v => String(v || '').toLowerCase().indexOf(q) !== -1);
+}
+
+// 並べ替え・区切りに使う日付（点検日、なければ作成日）
+function projDate(p) { return String(p.person || p.createdAt || ''); }
+
+function ymLabel(p) {
+  const m = projDate(p).match(/^(\d{4})[\/\-](\d{1,2})/);
+  return m ? `${m[1]}年${parseInt(m[2], 10)}月` : '日付なし';
+}
+
+function projectCardHtml(p) {
+  const photoCount = p.slots.filter(s => s.photo).length;
+  return `
+    <div class="project-card${p.archived ? ' archived' : ''}" data-project-id="${p.id}" onclick="onProjectClick(event, '${p.id}')">
       <div class="project-check">✓</div>
       <div class="project-icon">🏗️</div>
       <div class="project-info">
         <div class="project-name">${escHtml(projLabel(p))}</div>
-        <div class="project-meta">${p.type}　${p.person ? '日付：' + p.person : ''}　作成：${p.createdAt}</div>
+        <div class="project-meta">${escHtml(p.type)}${p.person ? '　日付：' + escHtml(p.person) : ''}${p.createdAt && p.createdAt !== p.person ? '　作成：' + escHtml(p.createdAt) : ''}</div>
       </div>
       <div class="project-badge">${photoCount}枚</div>
       <div class="project-arrow">›</div>
     </div>`;
-  }).join('');
+}
+
+function renderHome() {
+  const list = document.getElementById('project-list');
+  const empty = document.getElementById('empty-state');
+  const searchEl = document.getElementById('home-search');
+  const countEl = document.getElementById('home-count');
+  const q = searchEl ? searchEl.value.trim().toLowerCase() : '';
+
+  updateStorageInfo();
+
+  // 完了にしたものは通常の一覧から外す
+  const archivedCount = projects.filter(p => p.archived).length;
+  const toggleBtn = document.getElementById('btn-archive-toggle');
+  if (toggleBtn) {
+    toggleBtn.style.display = (archivedCount > 0 || showArchived) ? '' : 'none';
+    toggleBtn.textContent = showArchived ? '← 工事一覧へ' : `✅ 完了 ${archivedCount}`;
+    toggleBtn.classList.toggle('on', showArchived);
+  }
+  const titleEl = document.getElementById('home-list-title');
+  if (titleEl) titleEl.textContent = showArchived ? '完了した写真帳' : '工事一覧';
+
+  if (projects.length === 0) {
+    list.innerHTML = '';
+    if (countEl) countEl.textContent = '';
+    if (searchEl) searchEl.style.display = 'none';
+    document.getElementById('storage-bar').style.display = 'none';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+  if (searchEl) searchEl.style.display = '';
+
+  // 点検日の新しい順に並べる（年月で区切るため）
+  const base = projects.filter(p => !!p.archived === showArchived);
+  const shown = (q ? base.filter(p => matchProject(p, q)) : base.slice())
+    .sort((a, b) => projDate(b).localeCompare(projDate(a)));
+
+  if (countEl) countEl.textContent = q ? `${shown.length} / ${base.length}件` : `${base.length}件`;
+
+  if (shown.length === 0) {
+    list.innerHTML = q
+      ? '<div class="list-note">該当する工事がありません<br>別の言葉で探してみてください</div>'
+      : (showArchived
+          ? '<div class="list-note">完了にした写真帳はありません</div>'
+          : '<div class="list-note">工事がすべて完了になっています<br>右上の「完了」から確認できます</div>');
+    return;
+  }
+
+  let html = '', lastYm = null;
+  shown.forEach(p => {
+    const ym = ymLabel(p);
+    if (ym !== lastYm) { html += `<div class="ym-head">${escHtml(ym)}</div>`; lastYm = ym; }
+    html += projectCardHtml(p);
+  });
+  list.innerHTML = html;
 }
 
 // ===== HOME DELETE MODE =====
 let homeDeleteMode = false;
+let showArchived = false;
 let selectedProjects = new Set();
+
+// 完了した写真帳の一覧と、通常の一覧を切り替える
+function toggleArchivedView() {
+  if (homeDeleteMode) toggleHomeDeleteMode();
+  showArchived = !showArchived;
+  const searchEl = document.getElementById('home-search');
+  if (searchEl) searchEl.value = '';
+  renderHome();
+}
+
+function execArchive() {
+  if (selectedProjects.size === 0) return;
+  const count = selectedProjects.size;
+  const flag = !showArchived;          // 通常一覧なら完了へ、完了一覧なら通常へ戻す
+  projects.forEach(p => { if (selectedProjects.has(p.id)) p.archived = flag; });
+  save();
+  toggleHomeDeleteMode();
+  renderHome();
+  toast(flag ? `${count}件を完了にしました` : `${count}件を工事一覧に戻しました`);
+}
 
 function toggleHomeDeleteMode() {
   homeDeleteMode = !homeDeleteMode;
@@ -1381,10 +1786,13 @@ function onProjectClick(event, id) {
 }
 
 function updateHomeDeleteBtn() {
-  const btn = document.getElementById('btn-home-exec-delete');
   const count = selectedProjects.size;
-  btn.textContent = `削除する（${count}件）`;
+  const btn = document.getElementById('btn-home-exec-delete');
+  btn.textContent = `削除（${count}件）`;
   btn.disabled = count === 0;
+  const arc = document.getElementById('btn-home-archive');
+  arc.textContent = (showArchived ? '一覧に戻す' : '完了にする') + `（${count}件）`;
+  arc.disabled = count === 0;
 }
 
 function execHomeDelete() {
@@ -1392,6 +1800,7 @@ function execHomeDelete() {
   const count = selectedProjects.size;
   projects = projects.filter(p => !selectedProjects.has(p.id));
   save();
+  gcPhotos();
   toggleHomeDeleteMode();
   renderHome();
   toast(`${count}件削除しました`);
@@ -1401,10 +1810,10 @@ function execHomeDelete() {
 function openProject(id) {
   currentProjectId = id;
   const proj = projects.find(p => p.id === id);
-  projectSnapshot = JSON.stringify(proj);
+  projectSnapshot = JSON.stringify(proj, stripPhotos);
   document.getElementById('pb-title').value = projLabel(proj);
   document.getElementById('print-title').textContent = '写　真　帳';
-  document.getElementById('print-sub').textContent = `工事名：${proj.name}　点検種別：${proj.type}${proj.person ? '　担当：' + proj.person : ''}`;
+  document.getElementById('print-sub').textContent = `工事名：${proj.name}　種別：${proj.type}${proj.person ? '　担当：' + proj.person : ''}`;
   document.getElementById('screen-home').classList.remove('active');
   document.getElementById('screen-photobook').classList.add('active');
   renderPhotoBook();
@@ -1428,7 +1837,7 @@ function renameProject(value) {
 
 function goHome() {
   const proj = projects.find(p => p.id === currentProjectId);
-  if (proj && projectSnapshot !== null && JSON.stringify(proj) !== projectSnapshot) {
+  if (proj && projectSnapshot !== null && JSON.stringify(proj, stripPhotos) !== projectSnapshot) {
     document.getElementById('modal-leave').classList.add('open');
     return;
   }
@@ -1440,9 +1849,15 @@ function execGoHome(discard) {
   closeModal('modal-leave');
   if (discard && projectSnapshot !== null) {
     const idx = projects.findIndex(p => p.id === currentProjectId);
-    if (idx !== -1) { projects[idx] = JSON.parse(projectSnapshot); save(); }
+    if (idx !== -1) {
+      projects[idx] = JSON.parse(projectSnapshot);
+      hydrateProject(projects[idx]);   // 写真を読み戻す
+      save();
+    }
   }
   projectSnapshot = null;
+  document.getElementById('print-area').innerHTML = '';   // 印刷用に作った画像データを解放
+  if (reorderMode) { reorderMode = false; document.body.classList.remove('reorder-mode'); }
   document.getElementById('screen-photobook').classList.remove('active');
   document.getElementById('screen-home').classList.add('active');
   renderHome();
@@ -1452,7 +1867,7 @@ function execGoHome(discard) {
 // 明示的に保存したら「未保存の変更」扱いを解除する
 function markSaved() {
   const p = projects.find(x => x.id === currentProjectId);
-  projectSnapshot = p ? JSON.stringify(p) : null;
+  projectSnapshot = p ? JSON.stringify(p, stripPhotos) : null;
 }
 
 function renderPhotoBook() {
@@ -1463,12 +1878,12 @@ function renderPhotoBook() {
     const slotLocation = slot.location !== undefined ? slot.location : (proj.location || '');
     const slotType = slot.type !== undefined ? slot.type : proj.type;
     const dateVal = slot.date ? slot.date.replace(/\//g,'-') : '';
-    const memoVal = (slot.memo || '').replace(/"/g,'&quot;');
+    const memoVal = escAttr(slot.memo || '');
     const workTxt = escHtml(slot.work || '');
-    const nameVal = slotName.replace(/"/g,'&quot;');
-    const locationVal = slotLocation.replace(/"/g,'&quot;');
+    const nameVal = escAttr(slotName);
+    const locationVal = escAttr(slotLocation);
     return `
-    <div class="photo-slot ${slot.photo ? 'has-photo' : ''} ${slot.blank ? 'blank-mode' : ''}" id="slot-${slot.id}" onclick="onSlotClick(event, ${i})">
+    <div class="photo-slot ${slot.photo ? 'has-photo' : ''} ${slot.blank ? 'blank-mode' : ''}" id="slot-${slot.id}" data-slot-index="${i}" onclick="onSlotClick(event, ${i})">
       <div class="slot-check">✓</div>
       <div class="photo-area" onclick="onPhotoAreaClick(event, ${i})">
         ${slot.photo
@@ -1497,15 +1912,15 @@ function renderPhotoBook() {
           <input class="info-input" type="text" data-slot="${i}" data-key="location" placeholder="例：3階 電気室" value="${locationVal}">
         </div>
         <div class="info-row">
-          <div class="info-label">点検種別</div>
+          <div class="info-label">種別</div>
           <select class="info-input" data-slot="${i}" data-key="type" data-other-target="type-other-${i}">
             ${['2週間点検','1ヶ月点検','3ヶ月点検','6ヶ月点検','年次点検','2年点検','その他'].map(t =>
-              `<option value="${t}" ${slotType === t ? 'selected' : ''}>${t}</option>`
+              `<option value="${escAttr(t)}" ${slotType === t ? 'selected' : ''}>${escHtml(t)}</option>`
             ).join('')}
           </select>
-          <input class="info-input" id="type-other-${i}" type="text" placeholder="点検種別を入力" data-slot="${i}" data-key="type"
+          <input class="info-input" id="type-other-${i}" type="text" placeholder="種別を入力" data-slot="${i}" data-key="type"
             style="margin-top:4px;${slotType === 'その他' || (slotType && !['2週間点検','1ヶ月点検','3ヶ月点検','6ヶ月点検','年次点検','2年点検','その他'].includes(slotType)) ? '' : 'display:none;'}"
-            value="${slotType === 'その他' ? '' : (!['2週間点検','1ヶ月点検','3ヶ月点検','6ヶ月点検','年次点検','2年点検'].includes(slotType) ? slotType : '')}">
+            value="${escAttr(slotType === 'その他' ? '' : (!['2週間点検','1ヶ月点検','3ヶ月点検','6ヶ月点検','年次点検','2年点検'].includes(slotType) ? slotType : ''))}">
         </div>
         <div class="info-row">
           <div class="info-label">撮影日</div>
@@ -1558,6 +1973,7 @@ function renderPhotoBook() {
   });
   // 黒板のドラッグ・拡大縮小
   grid.querySelectorAll('.board-overlay').forEach(initBoardInteraction);
+  initReorder(grid);
 }
 
 function updateSlot(index, key, value) {
@@ -1566,7 +1982,12 @@ function updateSlot(index, key, value) {
   save();
 }
 
+function showAddSlotMenu() {
+  document.getElementById('modal-addslot').classList.add('open');
+}
+
 function addPhotoSlot() {
+  closeModal('modal-addslot');
   const proj = projects.find(p => p.id === currentProjectId);
   proj.slots.push({ id: uid(), photo: null, date: today(), memo: defaults.company || '', work: '', name: proj.name, location: proj.location || '', type: proj.type });
   save();
@@ -1574,11 +1995,136 @@ function addPhotoSlot() {
   toast('写真枠を追加しました');
 }
 
+// コピー元を選ぶ一覧を出す
+function showCopySlotSelect() {
+  closeModal('modal-addslot');
+  const proj = projects.find(p => p.id === currentProjectId);
+  const list = document.getElementById('copyslot-list');
+  if (!proj || !proj.slots.length) {
+    list.innerHTML = '<p style="text-align:center;color:var(--text-sub);padding:20px 0;">コピーできる枠がありません</p>';
+  } else {
+    list.innerHTML = proj.slots.map((sl, i) => {
+      const work = String(sl.work || '').split('\n')[0] || '（作業名なし）';
+      const meta = [sl.location, sl.type].filter(v => v).map(escHtml).join('　');
+      return `
+      <div class="file-list-item" onclick="execCopySlot(${i})">
+        <span style="font-size:20px">${sl.photo ? '🖼️' : '📷'}</span>
+        <div>
+          <div class="file-list-item-name">写真${i + 1}　${escHtml(work)}</div>
+          <div class="file-list-item-meta">${meta}${sl.board ? '　📋黒板あり' : ''}</div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+  document.getElementById('modal-copyslot').classList.add('open');
+}
+
+// 選んだ枠のすぐ下に、入力内容と黒板だけを引き継いだ枠を作る
+function execCopySlot(index) {
+  closeModal('modal-copyslot');
+  const proj = projects.find(p => p.id === currentProjectId);
+  const src = proj && proj.slots[index];
+  if (!src) return;
+  const copy = JSON.parse(JSON.stringify(src));
+  copy.id = uid();
+  copy.photo = null;        // 写真は引き継がない
+  delete copy.photoId;
+  delete copy.photoAR;
+  copy.blank = false;
+  proj.slots.splice(index + 1, 0, copy);
+  save();
+  renderPhotoBook();
+  toast(`写真${index + 1}をコピーして${index + 2}番目に追加しました`);
+}
+
+// ===== 並べ替えモード =====
+let reorderMode = false;
+
+function toggleReorderMode() {
+  if (deleteMode) toggleDeleteMode();
+  reorderMode = !reorderMode;
+  document.body.classList.toggle('reorder-mode', reorderMode);
+  document.getElementById('btn-reorder-mode').classList.toggle('active', reorderMode);
+  renderPhotoBook();
+  toast(reorderMode ? '並べ替えモードにしました' : '並べ替えを終了しました');
+}
+
+function initReorder(grid) {
+  if (!reorderMode) return;
+  // ドラッグ中はDOMを一切動かさない（動かすと指と枠の紐付けが外れて確定処理が走らなくなる）。
+  // 落とす位置に青い帯を出すだけにして、指を離した時に配列を並べ替える。
+  let dragEl = null, baseX = 0, baseY = 0, dropIndex = -1;
+
+  const slotUnder = (x, y) => {
+    const list = document.elementsFromPoint(x, y);
+    for (const el of list) {
+      const sl = el.closest && el.closest('.photo-slot');
+      if (sl && sl !== dragEl && sl.parentElement === grid) return sl;
+    }
+    return null;
+  };
+
+  const clearMarks = () => {
+    grid.querySelectorAll('.drop-before, .drop-after')
+      .forEach(el => el.classList.remove('drop-before', 'drop-after'));
+  };
+
+  grid.querySelectorAll('.photo-slot').forEach(el => {
+    el.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      dragEl = el;
+      baseX = e.clientX; baseY = e.clientY;
+      dropIndex = -1;
+      el.classList.add('dragging');
+      try { el.setPointerCapture(e.pointerId); } catch (err) { /* 古い環境でも動作継続 */ }
+    });
+
+    el.addEventListener('pointermove', e => {
+      if (!dragEl) return;
+      e.preventDefault();
+      dragEl.style.transform = `translate(${e.clientX - baseX}px, ${e.clientY - baseY}px) scale(1.03)`;
+      const t = slotUnder(e.clientX, e.clientY);
+      if (!t) return;                       // 枠の外に出ても直前の行き先は覚えておく
+      const r = t.getBoundingClientRect();
+      const ti = parseInt(t.dataset.slotIndex);
+      const after = e.clientX > r.left + r.width / 2;   // 右半分なら「その後ろ」へ
+      const next = after ? ti + 1 : ti;
+      if (next === dropIndex) return;
+      dropIndex = next;
+      clearMarks();
+      t.classList.add(after ? 'drop-after' : 'drop-before');
+    });
+
+    const end = () => {
+      if (!dragEl) return;
+      const from = parseInt(dragEl.dataset.slotIndex);
+      const raw = dropIndex;
+      dragEl.classList.remove('dragging');
+      dragEl.style.transform = '';
+      clearMarks();
+      dragEl = null;
+      dropIndex = -1;
+      if (raw < 0) { renderPhotoBook(); return; }
+      let to = raw > from ? raw - 1 : raw;   // 自分を抜いた分だけ位置がずれる
+      if (to === from) { renderPhotoBook(); return; }
+      const proj = projects.find(p => p.id === currentProjectId);
+      const moved = proj.slots.splice(from, 1)[0];
+      proj.slots.splice(to, 0, moved);
+      save();
+      renderPhotoBook();
+      toast(`写真${from + 1}を${to + 1}番目へ移動しました`);
+    };
+    el.addEventListener('pointerup', end);
+    el.addEventListener('pointercancel', end);
+  });
+}
+
 // ===== DELETE MODE =====
 let deleteMode = false;
 let selectedSlots = new Set();
 
 function toggleDeleteMode() {
+  if (reorderMode && !deleteMode) toggleReorderMode();
   deleteMode = !deleteMode;
   selectedSlots.clear();
   document.body.classList.toggle('delete-mode', deleteMode);
@@ -1616,6 +2162,7 @@ function execDelete() {
   const indices = Array.from(selectedSlots).sort((a, b) => b - a);
   indices.forEach(i => proj.slots.splice(i, 1));
   save();
+  gcPhotos();
   toggleDeleteMode();
   renderPhotoBook();
   toast(`${indices.length}件削除しました`);
@@ -1687,7 +2234,7 @@ function showOverwriteSelect() {
         <span style="font-size:20px">📁</span>
         <div>
           <div class="file-list-item-name">${escHtml(projLabel(p))}</div>
-          <div class="file-list-item-meta">${p.type}　${p.createdAt}</div>
+          <div class="file-list-item-meta">${escHtml(p.type)}　${escHtml(p.createdAt)}</div>
         </div>
       </div>`).join('');
   }
@@ -1756,9 +2303,17 @@ const EXCEL_KEYS = [
   ['company', ['会社']],
   ['name', ['工事']],
   ['location', ['場所']],
-  ['type', ['種別', '点検']],
+  ['type', ['種別', '点検']],   // 旧ファイルの「点検種別」も読める
   ['date', ['日']]
 ];
+
+// Excelの日付表記を YYYY/MM/DD に揃える（揃えられないときは元の文字を残す）
+function normalizeDate(v) {
+  const t = String(v == null ? '' : v).trim();
+  const m = t.match(/^(\d{4})[\/\-.](\d{1,2})[\/\-.](\d{1,2})/);
+  if (m) return `${m[1]}/${String(m[2]).padStart(2, '0')}/${String(m[3]).padStart(2, '0')}`;
+  return t;
+}
 
 function parseExcelRows(aoa) {
   let hi = aoa.findIndex(r => r.some(c => String(c).indexOf('作業') !== -1));
@@ -1777,7 +2332,7 @@ function parseExcelRows(aoa) {
     const r = aoa[i] || [];
     const get = k => (map[k] === undefined ? '' : String(r[map[k]] == null ? '' : r[map[k]]).trim());
     const o = { work: get('work'), location: get('location'), type: get('type'),
-                name: get('name'), company: get('company'), date: get('date') };
+                name: get('name'), company: get('company'), date: normalizeDate(get('date')) };
     if (o.work || o.location || o.type || o.name || o.company || o.date) rows.push(o);
   }
   return rows;
@@ -1836,7 +2391,7 @@ function downloadBlob(blob, filename) {
 function exportExcelTemplate() {
   closeModal('modal-excel');
   try {
-    const header = ['作業名', '場所', '点検種別', '工事名', '会社名', '撮影日'];
+    const header = ['作業名', '場所', '種別', '工事名', '会社名', '撮影日'];
     const pn = defaults.projName || '○○ビル定期点検';
     const co = defaults.company || '○○電気工業';
     const aoa = [header,
@@ -1871,8 +2426,8 @@ function showTemplateSelect() {
       <div class="file-list-item" onclick="createFromTemplate('${t.id}')">
         <span style="font-size:20px">📋</span>
         <div>
-          <div class="file-list-item-name">${t.name}</div>
-          <div class="file-list-item-meta">${t.type}　写真枠${t.rows ? t.rows.length : t.slotCount}枚${t.rows ? '　📊Excel' : ''}　${t.createdAt}</div>
+          <div class="file-list-item-name">${escHtml(t.name)}</div>
+          <div class="file-list-item-meta">${escHtml(t.type)}　写真枠${t.rows ? t.rows.length : t.slotCount}枚${t.rows ? '　📊Excel' : ''}　${escHtml(t.createdAt)}</div>
         </div>
       </div>`).join('');
   }
@@ -1924,8 +2479,8 @@ function renderTemplateManager() {
   list.innerHTML = templates.map(t => `
     <div class="template-card">
       <div class="template-card-info">
-        <div class="template-card-name">${t.name}</div>
-        <div class="template-card-meta">${t.type}　写真枠${t.rows ? t.rows.length : t.slotCount}枚${t.rows ? '　📊Excel' : ''}　作成：${t.createdAt}</div>
+        <div class="template-card-name">${escHtml(t.name)}</div>
+        <div class="template-card-meta">${escHtml(t.type)}　写真枠${t.rows ? t.rows.length : t.slotCount}枚${t.rows ? '　📊Excel' : ''}　作成：${escHtml(t.createdAt)}</div>
       </div>
       <div class="template-card-btns">
         <button class="tpl-btn" onclick="showEditTemplate('${t.id}')">編集</button>
@@ -1939,7 +2494,17 @@ function showEditTemplate(tplId) {
   document.getElementById('edit-tpl-id').value = tplId;
   document.getElementById('edit-tpl-name').value = tpl.name;
   document.getElementById('edit-tpl-projname').value = tpl.projName || '';
-  document.getElementById('edit-tpl-type').value = tpl.type || '';
+  const TYPE_OPTS = ['2週間点検', '1ヶ月点検', '3ヶ月点検', '6ヶ月点検', '年次点検', '2年点検'];
+  const otherEl = document.getElementById('edit-tpl-type-other');
+  if (tpl.type && TYPE_OPTS.indexOf(tpl.type) === -1) {   // 一覧にない種別は「その他」に入れる
+    document.getElementById('edit-tpl-type').value = 'その他';
+    otherEl.value = tpl.type;
+    otherEl.style.display = 'block';
+  } else {
+    document.getElementById('edit-tpl-type').value = tpl.type || '';
+    otherEl.value = '';
+    otherEl.style.display = 'none';
+  }
   document.getElementById('edit-tpl-slots').value = tpl.slotCount || 4;
   document.getElementById('modal-edit-template').classList.add('open');
 }
@@ -1981,10 +2546,10 @@ function boardValues(slot, proj) {
 }
 
 function boardRowsHtml(slot, proj) {
-  const labels = ['工事名', '作業名', '場所', '点検種別', '撮影日', '会社名'];
+  const labels = ['工事名', '作業名', '場所', '種別', '撮影日', '会社名'];
   const vals = boardValues(slot, proj);
   return labels.map((label, ri) =>
-    `<tr><td class="board-label">${label}</td><td class="board-value" data-board-row="${ri}">${String(vals[ri] || '').replace(/</g, '&lt;')}</td></tr>`
+    `<tr><td class="board-label">${escHtml(label)}</td><td class="board-value" data-board-row="${ri}">${escHtml(vals[ri])}</td></tr>`
   ).join('');
 }
 
@@ -1993,7 +2558,7 @@ function createBoard() {
   const proj = projects.find(p => p.id === currentProjectId);
   const slot = proj.slots[currentSlotIndex];
   if (slot.board) { toast('この枠にはすでに黒板があります'); return; }
-  slot.board = { x: 55, y: 60, w: 42, rel: 1 };
+  slot.board = { x: 48, y: 44, w: 50, rel: 1 };
   save();
   renderPhotoBook();
   openBoardEditor(currentSlotIndex);
@@ -2076,6 +2641,29 @@ function fitCellFont(text, cellW, cellH, base) {
   return f;
 }
 
+// 印刷したときの黒板の幅の下限（mm）。42mmで約6.2pt、読める下限
+const BOARD_MIN_PRINT_MM = 42;
+
+// この写真での黒板の下限（写真幅に対する%）。
+// 縦長写真は紙に小さく載るので、同じ%でも印刷は小さくなる。A4横を基準に逆算する。
+function boardMinPercent(slot) {
+  const box = printPhotoBox(false);
+  const r = photoRect(slot, box.w, box.h);
+  if (!r.w) return 45;
+  return Math.min(90, BOARD_MIN_PRINT_MM / r.w * 100);
+}
+
+// 黒板を「印刷で読める大きさ以上」かつ「写真からはみ出さない」範囲に収める
+function clampBoard(b, r, slot) {
+  const minW = boardMinPercent(slot);
+  const maxWByH = (r.h / r.w) * 100 * 7 / 5;      // 写真の高さから決まる最大の幅
+  const w = Math.min(Math.max(b.w, minW), 100, maxWByH);
+  const hPct = w * 5 / 7 * (r.w / r.h);           // 黒板の高さ（写真高さに対する%）
+  const x = Math.min(Math.max(b.x, 0), Math.max(0, 100 - w));
+  const y = Math.min(Math.max(b.y, 0), Math.max(0, 100 - hPct));
+  return { x: x, y: y, w: w };
+}
+
 // 写真が実際に表示されている矩形（object-fit:contain の結果）
 function photoRect(slot, cw, ch) {
   const ar = slot && slot.photoAR;
@@ -2128,11 +2716,18 @@ function layoutBoard(el) {
   }
   const r = photoRect(slot, cw, ch);
   const b = slot.board;
-  if (!b.rel) {   // 旧データ（写真枠基準）を写真基準に置き換える
+  // 旧データ（写真枠基準）を写真基準に置き換える。
+  // 写真があるのに比率が未確定なら、確定するまで変換しない（位置がずれるため）
+  if (!b.rel && !(slot.photo && !slot.photoAR)) {
     b.x = (b.x / 100 * cw - r.ox) / r.w * 100;
     b.y = (b.y / 100 * ch - r.oy) / r.h * 100;
     b.w = (b.w / 100 * cw) / r.w * 100;
     b.rel = 1;
+    save();
+  }
+  const c = clampBoard(b, r, slot);
+  if (Math.abs(c.w - b.w) > 0.01 || Math.abs(c.x - b.x) > 0.01 || Math.abs(c.y - b.y) > 0.01) {
+    b.x = c.x; b.y = c.y; b.w = c.w;
     save();
   }
   el.style.left  = ((r.ox + b.x / 100 * r.w) / cw * 100) + '%';
@@ -2173,7 +2768,8 @@ function initBoardInteraction(el) {
       el.style.top = (nt / ah * 100) + '%';
     } else {
       let nw = startW + (e.clientX - startX);
-      nw = Math.min(Math.max(r.w * 0.2, nw), r.ox + r.w - startL); // 横のはみ出し防止・最小20%
+      const minW = r.w * boardMinPercent(boardSlotOf(el)) / 100;   // 印刷で読める下限
+      nw = Math.min(Math.max(minW, nw), r.ox + r.w - startL);       // 横のはみ出しも防ぐ
       const maxH = r.oy + r.h - startT;                            // 縦のはみ出し防止（縦横比7:5）
       if (nw * 5 / 7 > maxH) nw = maxH * 7 / 5;
       el.style.width = (nw / aw * 100) + '%';
@@ -2191,10 +2787,14 @@ function initBoardInteraction(el) {
     const aw = area.clientWidth, ah = area.clientHeight;
     const r = photoRect(slot, aw, ah);
     const clamp = v => Math.min(Math.max(v, 0), 100);
-    b.x = clamp((el.offsetLeft - r.ox) / r.w * 100);   // 写真の中での割合として保存
-    b.y = clamp((el.offsetTop - r.oy) / r.h * 100);
-    b.w = clamp(el.offsetWidth / r.w * 100);
+    const c = clampBoard({
+      x: clamp((el.offsetLeft - r.ox) / r.w * 100),   // 写真の中での割合として保存
+      y: clamp((el.offsetTop - r.oy) / r.h * 100),
+      w: clamp(el.offsetWidth / r.w * 100)
+    }, r, slot);
+    b.x = c.x; b.y = c.y; b.w = c.w;
     b.rel = 1;
+    layoutBoard(el);
     fitBoardFont(el);
     save();
   };
@@ -2218,15 +2818,22 @@ function triggerAlbum() {
   document.getElementById('file-album').click();
 }
 
-function handleFile(file) {
+// slotId を渡すと、その枠に確実に入る（複数選択のとき、
+// 読み込みが終わる頃には currentSlotIndex が次へ進んでしまうため）
+function handleFile(file, slotId) {
   if (!file || !file.type.startsWith('image/')) return;
+  const targetId = slotId || (() => {
+    const pr = projects.find(p => p.id === currentProjectId);
+    const sl = pr && pr.slots[currentSlotIndex];
+    return sl ? sl.id : null;
+  })();
   const reader = new FileReader();
   reader.onload = e => {
     // 画像をリサイズして保存容量を節約
     const img = new Image();
     img.onload = () => {
       const canvas = document.createElement('canvas');
-      const MAX = 1200;
+      const MAX = 1000;
       let w = img.width, h = img.height;
       if (w > MAX || h > MAX) {
         if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
@@ -2234,14 +2841,24 @@ function handleFile(file) {
       }
       canvas.width = w; canvas.height = h;
       canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-      const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
       const proj = projects.find(p => p.id === currentProjectId);
-      proj.slots[currentSlotIndex].photo = dataUrl;
-      proj.slots[currentSlotIndex].photoAR = w / h;   // 写真の縦横比（黒板の位置合わせに使う）
+      if (!proj) return;
+      const slot = proj.slots.find(x => x.id === targetId);
+      if (!slot) return;      // その間に枠が消えていたら何もしない
+      slot.photo = dataUrl;
+      slot.photoAR = w / h;   // 写真の縦横比（黒板の位置合わせに使う）
+      if (usingIdb) {
+        const pid = uid();    // 毎回新しいIDにする（コピーした写真帳と共有しないため）
+        slot.photoId = pid;
+        idbPut(pid, dataUrl)
+          .then(() => { save(); gcPhotos(); updateStorageInfo(); })
+          .catch(() => { toast('⚠️ 写真を保存できませんでした（容量不足の可能性）'); });
+      }
       // ファイルの更新日時から撮影日を設定
       if (file.lastModified) {
         const d = new Date(file.lastModified);
-        proj.slots[currentSlotIndex].date = `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;
+        slot.date = `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;
       }
       save();
       renderPhotoBook();
@@ -2257,27 +2874,27 @@ document.getElementById('file-camera').addEventListener('change', e => {
   e.target.value = '';
 });
 document.getElementById('file-album').addEventListener('change', e => {
-  const files = Array.from(e.target.files);
-  const proj = projects.find(p => p.id === currentProjectId);
-  // 複数選択の場合は空きスロットに順番に入れる
-  let slotIdx = currentSlotIndex;
-  files.forEach((file, fi) => {
-    if (fi === 0) {
-      currentSlotIndex = slotIdx;
-      handleFile(file);
-    } else {
-      // 次の空きスロット or 新規追加
-      let nextEmpty = proj.slots.findIndex((s, i) => i > slotIdx && !s.photo);
-      if (nextEmpty === -1) {
-        proj.slots.push({ id: uid(), photo: null, date: today(), memo: defaults.company || '', work: '', name: proj.name, location: proj.location || '', type: proj.type });
-        nextEmpty = proj.slots.length - 1;
-      }
-      currentSlotIndex = nextEmpty;
-      handleFile(file);
-    }
-    slotIdx = currentSlotIndex + 1;
-  });
+  const files = Array.from(e.target.files || []);
   e.target.value = '';
+  if (!files.length) return;
+  const proj = projects.find(p => p.id === currentProjectId);
+  if (!proj) return;
+  // 先に「どの枠に入れるか」を全部決めてから読み込む
+  const used = [];
+  let cursor = currentSlotIndex;
+  files.forEach((file, fi) => {
+    if (fi === 0) { used.push(cursor); return; }
+    let next = proj.slots.findIndex((sl, i) => i > cursor && !sl.photo && used.indexOf(i) === -1);
+    if (next === -1) {
+      proj.slots.push({ id: uid(), photo: null, date: today(), memo: defaults.company || '', work: '', name: proj.name, location: proj.location || '', type: proj.type });
+      next = proj.slots.length - 1;
+    }
+    used.push(next);
+    cursor = next;
+  });
+  const ids = used.map(i => (proj.slots[i] || {}).id);
+  files.forEach((file, i) => { if (ids[i]) handleFile(file, ids[i]); });
+  if (files.length > 1) renderPhotoBook();
 });
 
 // ===== PRINT =====
@@ -2298,12 +2915,12 @@ function printPhotoBox(isPortrait) {
 function printBoardHtml(slot, proj, isPortrait) {
   const box = printPhotoBox(isPortrait);
   const r = photoRect(slot, box.w, box.h);
-  const b = slot.board;
+  const b = clampBoard(slot.board, r, slot);       // 画面と同じ範囲に収める
   const bw = b.w / 100 * r.w;                       // 黒板の幅（mm）
   const left = (r.ox + b.x / 100 * r.w) / box.w * 100;
   const top  = (r.oy + b.y / 100 * r.h) / box.h * 100;
   const base = bw * 0.052;
-  const labels = ['工事名', '作業名', '場所', '点検種別', '撮影日', '会社名'];
+  const labels = ['工事名', '作業名', '場所', '種別', '撮影日', '会社名'];
   const vals = boardValues(slot, proj);
   const rows = labels.map((label, ri) => {
     const cell = boardCellBox(bw, ri);
@@ -2353,6 +2970,11 @@ function execPrint(skipBlanks, layout) {
     slots = proj.slots.map(s => s.blank ? null : s);
   }
 
+  if (!slots.length || slots.every(sl => !sl)) {
+    toast('⚠️ 印刷できる写真枠がありません（すべて白紙です）');
+    return;
+  }
+
   const totalPages = Math.ceil(slots.length / 4);
   let pagesHtml = '';
 
@@ -2384,13 +3006,13 @@ function execPrint(skipBlanks, layout) {
               : `<div class="print-slot-photo-empty">写真なし</div>`}
             ${slot.board ? printBoardHtml(slot, proj, isPortrait) : ''}
           </div>
-          <div class="print-slot-info">
+          <div class="print-slot-info board-side">
             <div class="print-slot-info-row">
-              <div class="print-slot-info-label">工事名</div>
-              <div class="print-slot-info-value">${escHtml(name)}</div>
+              <div class="print-slot-info-label">日付</div>
+              <div class="print-slot-info-value">${escHtml(date)}</div>
             </div>
             <div class="print-slot-info-row">
-              <div class="print-slot-info-label">作業名</div>
+              <div class="print-slot-info-label">内容</div>
               <div class="print-slot-info-value multiline">${escHtml(work)}</div>
             </div>
             <div class="print-slot-info-row">
@@ -2398,16 +3020,8 @@ function execPrint(skipBlanks, layout) {
               <div class="print-slot-info-value">${escHtml(location)}</div>
             </div>
             <div class="print-slot-info-row">
-              <div class="print-slot-info-label">点検種別</div>
+              <div class="print-slot-info-label">種別</div>
               <div class="print-slot-info-value">${escHtml(type)}</div>
-            </div>
-            <div class="print-slot-info-row">
-              <div class="print-slot-info-label">撮影日</div>
-              <div class="print-slot-info-value">${escHtml(date)}</div>
-            </div>
-            <div class="print-slot-info-row">
-              <div class="print-slot-info-label">会社名</div>
-              <div class="print-slot-info-value">${escHtml(memo)}</div>
             </div>
           </div>
         </div>`;
@@ -2449,6 +3063,7 @@ window.addEventListener('error', e => {
   toast('⚠️ エラーが発生：' + (e.message || '不明なエラー'));
 });
 renderHome();
+initPhotoStorage();
 </script>
 <script>
 // オフライン対応：Service Worker登録
