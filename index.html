@@ -915,9 +915,6 @@
   <div class="app-header">
     <div class="header-row">
       <div class="app-title">📷 写真<span>帳</span></div>
-      <div class="header-actions">
-        <button class="btn-icon" onclick="showAddProject()">＋ 工事追加</button>
-      </div>
     </div>
   </div>
   <div class="home-pad">
@@ -944,17 +941,17 @@
       <div class="storage-text" id="storage-text"></div>
       <div class="storage-track"><div class="storage-fill" id="storage-fill"></div></div>
     </div>
+    <div style="display:flex;gap:10px;margin-bottom:14px;">
+      <button class="btn-add-project" style="flex:2;margin-top:0;" onclick="showAddProject()">
+        ＋ 新しい作業を追加
+      </button>
+      <button class="btn-delete-mode" id="btn-home-delete-mode" style="flex:1;" onclick="toggleHomeDeleteMode()">☑️ 選択</button>
+    </div>
     <input class="home-search" id="home-search" type="search" placeholder="🔍 名前・場所・種別で絞り込む" oninput="renderHome()">
     <div id="project-list"></div>
     <div id="empty-state" class="empty-state" style="display:none;">
       <div class="icon">🏗️</div>
-      <p>工事がまだ登録されていません<br>「＋ 工事追加」から始めましょう</p>
-    </div>
-    <div style="display:flex;gap:10px;margin-top:6px;">
-      <button class="btn-add-project" style="flex:2;margin-top:0;" onclick="showAddProject()">
-        ＋ 新しい工事を追加
-      </button>
-      <button class="btn-delete-mode" id="btn-home-delete-mode" style="flex:1;" onclick="toggleHomeDeleteMode()">☑️ 選択</button>
+      <p>写真帳がまだありません<br>「＋ 新しい作業を追加」から始めましょう</p>
     </div>
   </div>
   <div class="delete-bar" id="home-delete-bar" style="display:none;">
@@ -1163,38 +1160,11 @@
 <!-- ===== ADD PROJECT MODAL ===== -->
 <div class="modal-overlay" id="modal-add">
   <div class="modal">
-    <div class="modal-title">新しい工事を追加</div>
+    <div class="modal-title">新しい作業を追加</div>
     <div class="modal-field">
       <div class="modal-label">写真帳の名前</div>
       <input class="modal-input" id="input-title" type="text" placeholder="例：○○ビル定期点検_9月">
-      <div style="font-size:11px;color:var(--text-sub);margin-top:5px;">工事一覧と見出しに表示されます（空欄なら工事名を使います）</div>
-    </div>
-    <div class="modal-field">
-      <div class="modal-label">工事名</div>
-      <input class="modal-input" id="input-name" type="text" placeholder="例：○○ビル定期点検">
-      <div style="font-size:11px;color:var(--text-sub);margin-top:5px;">各写真枠と黒板に入る工事名です</div>
-    </div>
-    <div class="modal-field">
-      <div class="modal-label">場所</div>
-      <input class="modal-input" id="input-location" type="text" placeholder="例：3階 電気室">
-    </div>
-    <div class="modal-field">
-      <div class="modal-label">種別</div>
-      <select class="modal-select" id="input-type" onchange="toggleOtherInput('input-type-other', this.value)">
-        <option value="">選択してください</option>
-        <option>2週間点検</option>
-        <option>1ヶ月点検</option>
-        <option>3ヶ月点検</option>
-        <option>6ヶ月点検</option>
-        <option>年次点検</option>
-        <option>2年点検</option>
-        <option>その他</option>
-      </select>
-      <input class="modal-input" id="input-type-other" type="text" placeholder="種別を入力" style="margin-top:8px;display:none;">
-    </div>
-    <div class="modal-field">
-      <div class="modal-label">日付</div>
-      <input class="modal-input" id="input-person" type="date">
+      <div style="font-size:11px;color:var(--text-sub);margin-top:5px;">工事一覧と見出しに表示されます</div>
     </div>
     <div class="modal-btns">
       <button class="modal-btn-cancel" onclick="closeModal('modal-add')">キャンセル</button>
@@ -1513,10 +1483,12 @@ function stripPhotos(key, value) {
 
 // 使われていない写真をIndexedDBから消す
 function gcPhotos() {
-  if (!usingIdb) return;
+  if (!usingIdb) return Promise.resolve();
   const used = {};
   projects.forEach(p => p.slots.forEach(s => { if (s.photoId) used[s.photoId] = 1; }));
-  idbAllKeys().then(keys => keys.forEach(k => { if (!used[k]) idbDelete(k); }));
+  return idbAllKeys()
+    .then(keys => Promise.all(keys.filter(k => !used[k]).map(k => idbDelete(k))))
+    .then(() => { updateStorageInfo(); });
 }
 
 // 写真をIndexedDBから読み戻す
@@ -1524,7 +1496,9 @@ function hydrateProject(p) {
   if (!usingIdb || !p) return Promise.resolve();
   const tasks = [];
   p.slots.forEach(s => {
-    if (!s.photo && s.photoId) tasks.push(idbGet(s.photoId).then(v => { if (v) s.photo = v; }));
+    if (!s.photo && s.photoId) tasks.push(idbGet(s.photoId).then(v => {
+      if (v) { s.photo = v; if (!s.photoBytes) s.photoBytes = v.length; }
+    }));
   });
   return Promise.all(tasks);
 }
@@ -1540,9 +1514,14 @@ function initPhotoStorage() {
       if (slot.photo && !slot.photoId) {
         const pid = uid();
         moved++;
-        tasks.push(idbPut(pid, slot.photo).then(() => { slot.photoId = pid; }).catch(() => {}));
+        const bytes = slot.photo.length;
+        tasks.push(idbPut(pid, slot.photo).then(() => {
+          slot.photoId = pid; slot.photoBytes = bytes;
+        }).catch(() => {}));
       } else if (!slot.photo && slot.photoId) {
-        tasks.push(idbGet(slot.photoId).then(v => { if (v) slot.photo = v; }));
+        tasks.push(idbGet(slot.photoId).then(v => {
+          if (v) { slot.photo = v; if (!slot.photoBytes) slot.photoBytes = v.length; }
+        }));
       }
     }));
     return Promise.all(tasks).then(() => {
@@ -1555,11 +1534,20 @@ function initPhotoStorage() {
 }
 
 // 保存容量の表示
+// 使用量はブラウザの申告ではなく、写真データの合計から出す。
+// ブラウザの数値は削除してもすぐ減らない（あとでまとめて片付けるため）。
 function updateStorageInfo() {
   const bar = document.getElementById('storage-bar');
   if (!bar) return;
-  let photoCount = 0;
-  projects.forEach(p => p.slots.forEach(s => { if (s.photo || s.photoId) photoCount++; }));
+  let photoCount = 0, bytes = 0;
+  projects.forEach(p => p.slots.forEach(s => {
+    if (s.photo || s.photoId) {
+      photoCount++;
+      bytes += s.photoBytes || (s.photo ? s.photo.length : 0);
+    }
+  }));
+  try { bytes += (safeGetItem('photobook_projects') || '').length; } catch (e) {}
+  const usedMB = bytes / 1048576;
   const paint = (usedMB, quotaMB) => {
     const pct = quotaMB > 0 ? Math.min(100, usedMB / quotaMB * 100) : 0;
     const fill = document.getElementById('storage-fill');
@@ -1570,14 +1558,11 @@ function updateStorageInfo() {
       `📦 写真${photoCount}枚　${usedMB.toFixed(1)}MB / ${quotaMB >= 1024 ? (quotaMB / 1024).toFixed(1) + 'GB' : quotaMB.toFixed(0) + 'MB'}（${pct.toFixed(1)}%）`;
   };
   if (usingIdb && navigator.storage && navigator.storage.estimate) {
-    navigator.storage.estimate().then(e => {
-      if (!e || !e.quota) return;
-      paint((e.usage || 0) / 1048576, e.quota / 1048576);
-    }).catch(() => {});
+    navigator.storage.estimate()
+      .then(e => paint(usedMB, (e && e.quota ? e.quota : 500 * 1048576) / 1048576))
+      .catch(() => paint(usedMB, 500));
   } else {
-    let bytes = 0;
-    try { bytes = (safeGetItem('photobook_projects') || '').length; } catch (err) {}
-    paint(bytes / 1048576, 5);   // localStorage しか使えないときの目安
+    paint(usedMB, 5);   // localStorage しか使えないときの目安
   }
 }
 
@@ -1597,15 +1582,8 @@ function toast(msg) {
 // ===== MODALS =====
 function showAddProject() {
   document.getElementById('input-title').value = '';
-  document.getElementById('input-name').value = defaults.projName || '';
-  document.getElementById('input-location').value = '';
-  document.getElementById('input-type').value = '';
-  document.getElementById('input-type-other').value = '';
-  document.getElementById('input-type-other').style.display = 'none';
-  const d = new Date();
-  document.getElementById('input-person').value = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
   document.getElementById('modal-add').classList.add('open');
-  setTimeout(() => document.getElementById('input-name').focus(), 300);
+  setTimeout(() => document.getElementById('input-title').focus(), 300);
 }
 function toggleOtherInput(inputId, val) {
   const el = document.getElementById(inputId);
@@ -1623,23 +1601,24 @@ function closeModal(id) { document.getElementById(id).classList.remove('open'); 
 // ===== PROJECT MANAGEMENT =====
 function addProject() {
   const title = document.getElementById('input-title').value.trim();
-  const name = document.getElementById('input-name').value.trim();
-  const location = document.getElementById('input-location').value.trim();
-  const typeRaw = document.getElementById('input-type').value;
-  const typeOther = document.getElementById('input-type-other').value.trim();
-  const type = typeRaw === 'その他' ? (typeOther || 'その他') : typeRaw;
-  const dateVal = document.getElementById('input-person').value;
-  const person = dateVal ? dateVal.replace(/-/g, '/') : today();
-  if (!name) { toast('⚠️ 工事名を入力してください'); return; }
-  if (!type) { toast('⚠️ 種別を選択してください'); return; }
-  const proj = { id: uid(), title: title || name, name, location, type, person, slots: [], createdAt: today() };
-  for (let i = 0; i < 4; i++) proj.slots.push({ id: uid(), photo: null, date: person, memo: defaults.company || '', work: '', name, location, type });
+  if (!title) { toast('⚠️ 写真帳の名前を入力してください'); return; }
+  // 写真枠は作らない。使う人が「＋ 写真枠」から必要な分だけ足す
+  const proj = {
+    id: uid(),
+    title: title,
+    name: defaults.projName || title,   // 写真枠に入る工事名（初期設定があればそれを使う）
+    location: '',
+    type: '',
+    person: today(),
+    slots: [],
+    createdAt: today()
+  };
   projects.unshift(proj);
   save();
   closeModal('modal-add');
   renderHome();
   openProject(proj.id);
-  toast('工事を追加しました');
+  toast('作業を追加しました');
 }
 
 function deleteProject(id) {
@@ -1873,6 +1852,10 @@ function markSaved() {
 function renderPhotoBook() {
   const proj = projects.find(p => p.id === currentProjectId);
   const grid = document.getElementById('photo-grid');
+  if (!proj.slots.length) {
+    grid.innerHTML = '<div class="list-note" style="grid-column:1/-1;">写真枠がまだありません<br>下の「＋ 写真枠」から追加してください</div>';
+    return;
+  }
   grid.innerHTML = proj.slots.map((slot, i) => {
     const slotName = slot.name !== undefined ? slot.name : proj.name;
     const slotLocation = slot.location !== undefined ? slot.location : (proj.location || '');
@@ -2882,6 +2865,7 @@ function handleFile(file, slotId) {
       const slot = proj.slots.find(x => x.id === targetId);
       if (!slot) return;      // その間に枠が消えていたら何もしない
       slot.photo = dataUrl;
+      slot.photoBytes = dataUrl.length;   // 使用量の表示に使う
       slot.photoAR = w / h;   // 写真の縦横比（黒板の位置合わせに使う）
       if (usingIdb) {
         const pid = uid();    // 毎回新しいIDにする（コピーした写真帳と共有しないため）
