@@ -561,7 +561,7 @@
       vertical-align: middle;
       overflow: hidden; white-space: pre-wrap; word-break: break-word;
     }
-    .print-board .board-table td.board-label { width: 30%; font-weight: 700; }
+    .print-board .board-table td.board-label { width: 22%; font-weight: 700; text-align: center; }
     .print-slot-photo img {
       width: 100%; height: 100%;
       object-fit: contain;
@@ -839,7 +839,7 @@
     vertical-align: middle;
     overflow: hidden; white-space: pre-wrap; word-break: break-word;
   }
-  .board-table td.board-label { width: 30%; font-weight: 700; }
+  .board-table td.board-label { width: 22%; font-weight: 700; text-align: center; }
   .board-close {
     position: absolute; top: -10px; right: -10px;
     width: 22px; height: 22px; border-radius: 50%;
@@ -2053,7 +2053,8 @@ function initReorder(grid) {
   if (!reorderMode) return;
   // ドラッグ中はDOMを一切動かさない（動かすと指と枠の紐付けが外れて確定処理が走らなくなる）。
   // 落とす位置に青い帯を出すだけにして、指を離した時に配列を並べ替える。
-  let dragEl = null, baseX = 0, baseY = 0, dropIndex = -1;
+  let dragEl = null, baseX = 0, baseY = 0, baseScroll = 0, dropIndex = -1;
+  let lastX = 0, lastY = 0, scrollDir = 0, scrollTimer = null, maxScroll = 0;
 
   const slotUnder = (x, y) => {
     const list = document.elementsFromPoint(x, y);
@@ -2069,11 +2070,49 @@ function initReorder(grid) {
       .forEach(el => el.classList.remove('drop-before', 'drop-after'));
   };
 
+  // 指の位置に合わせて枠を動かし、落とす位置の印を付け直す
+  const updateDrag = (x, y) => {
+    if (!dragEl) return;
+    lastX = x; lastY = y;
+    const dy = (y - baseY) + (window.scrollY - baseScroll);   // 自動スクロールの分も足す
+    dragEl.style.transform = `translate(${x - baseX}px, ${dy}px) scale(1.03)`;
+    const t = slotUnder(x, y);
+    if (!t) return;                      // 枠の外に出ても直前の行き先は覚えておく
+    const r = t.getBoundingClientRect();
+    const ti = parseInt(t.dataset.slotIndex);
+    const after = x > r.left + r.width / 2;   // 右半分なら「その後ろ」へ
+    const next = after ? ti + 1 : ti;
+    if (next === dropIndex) return;
+    dropIndex = next;
+    clearMarks();
+    t.classList.add(after ? 'drop-after' : 'drop-before');
+  };
+
+  // 画面を縦に5分割し、一番上／一番下の区画に指が来たら自動でスクロールする
+  const setScrollDir = d => {
+    if (d === scrollDir) return;
+    scrollDir = d;
+    if (scrollTimer) { clearInterval(scrollTimer); scrollTimer = null; }
+    if (!d) return;
+    scrollTimer = setInterval(() => {
+      if (!dragEl || !scrollDir) return;
+      const before = window.scrollY;
+      const next = Math.min(maxScroll, Math.max(0, before + scrollDir * 14));
+      if (next === before) return;          // 端まで来たら止める
+      window.scrollTo(0, next);
+      updateDrag(lastX, lastY);
+    }, 16);
+  };
+
   grid.querySelectorAll('.photo-slot').forEach(el => {
     el.addEventListener('pointerdown', e => {
       e.preventDefault();
       dragEl = el;
       baseX = e.clientX; baseY = e.clientY;
+      baseScroll = window.scrollY;
+      // ドラッグ中の枠がページを押し広げるので、掴んだ時点の長さを上限にする
+      maxScroll = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+      lastX = e.clientX; lastY = e.clientY;
       dropIndex = -1;
       el.classList.add('dragging');
       try { el.setPointerCapture(e.pointerId); } catch (err) { /* 古い環境でも動作継続 */ }
@@ -2082,20 +2121,13 @@ function initReorder(grid) {
     el.addEventListener('pointermove', e => {
       if (!dragEl) return;
       e.preventDefault();
-      dragEl.style.transform = `translate(${e.clientX - baseX}px, ${e.clientY - baseY}px) scale(1.03)`;
-      const t = slotUnder(e.clientX, e.clientY);
-      if (!t) return;                       // 枠の外に出ても直前の行き先は覚えておく
-      const r = t.getBoundingClientRect();
-      const ti = parseInt(t.dataset.slotIndex);
-      const after = e.clientX > r.left + r.width / 2;   // 右半分なら「その後ろ」へ
-      const next = after ? ti + 1 : ti;
-      if (next === dropIndex) return;
-      dropIndex = next;
-      clearMarks();
-      t.classList.add(after ? 'drop-after' : 'drop-before');
+      updateDrag(e.clientX, e.clientY);
+      const vh = window.innerHeight, zone = vh / 5;
+      setScrollDir(e.clientY > vh - zone ? 1 : (e.clientY < zone ? -1 : 0));
     });
 
     const end = () => {
+      setScrollDir(0);
       if (!dragEl) return;
       const from = parseInt(dragEl.dataset.slotIndex);
       const raw = dropIndex;
@@ -2534,6 +2566,9 @@ function deleteTemplate(tplId) {
 }
 
 // ===== 電子黒板 =====
+// 黒板の中の見出し。短くして値の欄を広く取る
+const BOARD_LABELS = ['工事', '作業', '場所', '種別', '日付', '会社'];
+
 function boardValues(slot, proj) {
   return [
     slot.name !== undefined ? slot.name : proj.name,
@@ -2546,7 +2581,7 @@ function boardValues(slot, proj) {
 }
 
 function boardRowsHtml(slot, proj) {
-  const labels = ['工事名', '作業名', '場所', '種別', '撮影日', '会社名'];
+  const labels = BOARD_LABELS;
   const vals = boardValues(slot, proj);
   return labels.map((label, ri) =>
     `<tr><td class="board-label">${escHtml(label)}</td><td class="board-value" data-board-row="${ri}">${escHtml(vals[ri])}</td></tr>`
@@ -2558,7 +2593,7 @@ function createBoard() {
   const proj = projects.find(p => p.id === currentProjectId);
   const slot = proj.slots[currentSlotIndex];
   if (slot.board) { toast('この枠にはすでに黒板があります'); return; }
-  slot.board = { x: 48, y: 44, w: 50, rel: 1 };
+  slot.board = { x: 0, y: 100, w: 50, rel: 1 };   // 左下から始める（はみ出し分はclampBoardが調整）
   save();
   renderPhotoBook();
   openBoardEditor(currentSlotIndex);
@@ -2675,7 +2710,7 @@ function photoRect(slot, cw, ch) {
 // 黒板の中の1セルの大きさ。px でも mm でも同じ比率になるようにする
 function boardCellBox(w, ri) {
   const hFrac = (ri === 1) ? 0.30 : 0.14;   // 2行目（作業名）は広め
-  return { cw: Math.max(0.5, w * 0.70 - w * 0.055), ch: Math.max(0.5, (w * 5 / 7) * hFrac - w * 0.012) };
+  return { cw: Math.max(0.5, w * 0.78 - w * 0.055), ch: Math.max(0.5, (w * 5 / 7) * hFrac - w * 0.012) };
 }
 
 // 黒板の文字サイズを合わせる。precise=false（ドラッグ中）は全体サイズだけ変える
@@ -2920,7 +2955,7 @@ function printBoardHtml(slot, proj, isPortrait) {
   const left = (r.ox + b.x / 100 * r.w) / box.w * 100;
   const top  = (r.oy + b.y / 100 * r.h) / box.h * 100;
   const base = bw * 0.052;
-  const labels = ['工事名', '作業名', '場所', '種別', '撮影日', '会社名'];
+  const labels = BOARD_LABELS;
   const vals = boardValues(slot, proj);
   const rows = labels.map((label, ri) => {
     const cell = boardCellBox(bw, ri);
