@@ -698,6 +698,41 @@
     background: #c0392b; border-color: #c0392b; color: white;
   }
   body.delete-mode .photo-area { pointer-events: none; }
+
+  /* まとめて入力の選択モード（削除モードと区別するため青） */
+  body.bulk-mode .slot-check { display: flex; }
+  body.bulk-mode .photo-slot { cursor: pointer; position: relative; }
+  body.bulk-mode .photo-slot.selected { border-color: var(--blue) !important; border-style: solid !important; }
+  body.bulk-mode .photo-slot.selected .slot-check {
+    background: var(--blue); border-color: var(--blue); color: white;
+  }
+  body.bulk-mode .photo-area,
+  body.bulk-mode .photo-info,
+  body.bulk-mode .blank-toggle { pointer-events: none; }
+  body.bulk-mode .bulk-bar { display: flex; }
+  body.bulk-mode .normal-bar { display: none; }
+  .bulk-bar {
+    display: none; position: fixed; bottom: 0; left: 0; right: 0;
+    background: white; border-top: 1px solid var(--border);
+    padding: 12px 16px; gap: 10px;
+    box-shadow: 0 -2px 12px rgba(26,39,68,0.08);
+    z-index: 100;
+  }
+  .btn-bulk-next {
+    flex: 2; background: var(--navy); color: white;
+    border: none; border-radius: 12px; padding: 14px;
+    font-size: 14px; font-weight: 700;
+    font-family: 'Noto Sans JP', sans-serif; cursor: pointer;
+  }
+  .btn-bulk-next:disabled { background: var(--border); color: var(--text-sub); cursor: default; }
+  .bulk-hint {
+    position: fixed; bottom: 78px; left: 16px; right: 16px;
+    background: var(--blue); color: #fff;
+    font-size: 12px; text-align: center;
+    padding: 9px; border-radius: 10px; z-index: 99;
+    display: none;
+  }
+  body.bulk-mode .bulk-hint { display: block; }
   .btn-delete-mode {
     flex: 1; background: var(--bg);
     color: var(--text);
@@ -1072,6 +1107,12 @@
     <button class="btn-cancel-delete" onclick="toggleDeleteMode()">キャンセル</button>
     <button class="btn-exec-delete" id="btn-exec-delete" onclick="execDelete()" disabled>削除する（0件）</button>
   </div>
+  <div class="bulk-hint no-print">入力したい写真枠をタップして選んでください</div>
+  <div class="bulk-bar no-print">
+    <button class="btn-cancel-delete" onclick="exitBulkMode()">キャンセル</button>
+    <button class="btn-cancel-delete" onclick="toggleBulkSelectAll()" id="btn-bulk-all">すべて選ぶ</button>
+    <button class="btn-bulk-next" id="btn-bulk-next" onclick="openBulkDialog()" disabled>入力へ（0件）</button>
+  </div>
 </div>
 
 <!-- ===== CONTINUOUS SHOOT ===== -->
@@ -1126,8 +1167,13 @@
       <div class="modal-label">入れる内容</div>
       <input class="modal-input" id="bulk-value" type="text">
     </div>
+    <label style="display:flex;align-items:center;gap:10px;padding:11px 12px;margin-bottom:10px;
+                  border:1.5px solid var(--border);border-radius:10px;background:var(--bg);cursor:pointer;">
+      <input type="checkbox" id="bulk-empty-only" style="width:20px;height:20px;flex:0 0 auto;">
+      <span style="font-size:13px;font-weight:500;">空欄の枠だけに入れる</span>
+    </label>
     <div style="font-size:11px;color:var(--text-sub);margin-bottom:14px;line-height:1.6;">
-      この写真帳の<span id="bulk-count">0</span>枠すべてに入ります（今の内容は上書きされます）
+      選んだ<span id="bulk-count">0</span>枠に入ります。チェックを入れると、すでに文字が入っている枠はそのまま残します。
     </div>
     <div class="modal-btns">
       <button class="modal-btn-cancel" onclick="closeModal('modal-bulk')">キャンセル</button>
@@ -2038,6 +2084,7 @@ function execGoHome(discard) {
     }
   }
   projectSnapshot = null;
+  if (bulkMode) { bulkMode = false; bulkSelected.clear(); document.body.classList.remove('bulk-mode'); }
   document.getElementById('print-area').innerHTML = '';   // 印刷用に作った画像データを解放
   if (reorderMode) { reorderMode = false; document.body.classList.remove('reorder-mode'); }
   document.getElementById('screen-photobook').classList.remove('active');
@@ -2164,6 +2211,11 @@ function renderPhotoBook() {
   // 黒板のドラッグ・拡大縮小
   grid.querySelectorAll('.board-overlay').forEach(initBoardInteraction);
   initReorder(grid);
+  if (bulkMode) {
+    grid.querySelectorAll('.photo-slot').forEach((el, i) => {
+      el.classList.toggle('selected', bulkSelected.has(i));
+    });
+  }
 }
 
 function updateSlot(index, key, value) {
@@ -2231,6 +2283,7 @@ function execCopySlot(index) {
 let reorderMode = false;
 
 function toggleReorderMode() {
+  if (bulkMode) exitBulkMode();
   if (deleteMode) toggleDeleteMode();
   reorderMode = !reorderMode;
   document.body.classList.toggle('reorder-mode', reorderMode);
@@ -2346,6 +2399,7 @@ let deleteMode = false;
 let selectedSlots = new Set();
 
 function toggleDeleteMode() {
+  if (bulkMode) exitBulkMode();
   if (reorderMode && !deleteMode) toggleReorderMode();
   deleteMode = !deleteMode;
   selectedSlots.clear();
@@ -2354,6 +2408,7 @@ function toggleDeleteMode() {
 }
 
 function onSlotClick(event, index) {
+  if (bulkMode) { onBulkSlotClick(event, index); return; }
   if (!deleteMode) return;
   const el = event.currentTarget;
   if (selectedSlots.has(index)) {
@@ -3086,10 +3141,63 @@ function execBoardField() {
 }
 
 // ===== まとめて入力 =====
+// まず枠を選び、そのあと内容を入れる
+let bulkMode = false;
+let bulkSelected = new Set();
+
 function showBulkInput() {
   const proj = projects.find(p => p.id === currentProjectId);
   if (!proj || !proj.slots.length) { toast('⚠️ 写真枠がありません'); return; }
-  document.getElementById('bulk-count').textContent = proj.slots.length;
+  if (deleteMode) toggleDeleteMode();
+  if (reorderMode) toggleReorderMode();
+  bulkMode = true;
+  bulkSelected.clear();
+  document.body.classList.add('bulk-mode');
+  renderPhotoBook();
+  updateBulkBar();
+  toast('入れたい枠をタップして選んでください');
+}
+
+function exitBulkMode() {
+  bulkMode = false;
+  bulkSelected.clear();
+  document.body.classList.remove('bulk-mode');
+  renderPhotoBook();
+}
+
+function onBulkSlotClick(event, index) {
+  const el = event.currentTarget;
+  if (bulkSelected.has(index)) { bulkSelected.delete(index); el.classList.remove('selected'); }
+  else { bulkSelected.add(index); el.classList.add('selected'); }
+  updateBulkBar();
+}
+
+function toggleBulkSelectAll() {
+  const proj = projects.find(p => p.id === currentProjectId);
+  if (!proj) return;
+  const all = bulkSelected.size === proj.slots.length;
+  bulkSelected.clear();
+  if (!all) proj.slots.forEach((sl, i) => bulkSelected.add(i));
+  document.querySelectorAll('#photo-grid .photo-slot').forEach((el, i) => {
+    el.classList.toggle('selected', bulkSelected.has(i));
+  });
+  updateBulkBar();
+}
+
+function updateBulkBar() {
+  const proj = projects.find(p => p.id === currentProjectId);
+  const n = bulkSelected.size;
+  const btn = document.getElementById('btn-bulk-next');
+  btn.textContent = `入力へ（${n}件）`;
+  btn.disabled = n === 0;
+  document.getElementById('btn-bulk-all').textContent =
+    (proj && n === proj.slots.length && n > 0) ? 'すべて外す' : 'すべて選ぶ';
+}
+
+function openBulkDialog() {
+  if (!bulkSelected.size) return;
+  document.getElementById('bulk-count').textContent = bulkSelected.size;
+  document.getElementById('bulk-empty-only').checked = false;
   onBulkKeyChange();
   document.getElementById('modal-bulk').classList.add('open');
 }
@@ -3105,13 +3213,20 @@ function execBulk() {
   const proj = projects.find(p => p.id === currentProjectId);
   if (!proj) return;
   const k = document.getElementById('bulk-key').value;
+  const emptyOnly = document.getElementById('bulk-empty-only').checked;
   let v = document.getElementById('bulk-value').value;
   if (k === 'date') v = v.replace(/-/g, '/');
-  proj.slots.forEach(sl => { sl[k] = v; });
+  let n = 0, skipped = 0;
+  proj.slots.forEach((sl, i) => {
+    if (!bulkSelected.has(i)) return;
+    if (emptyOnly && String(sl[k] == null ? '' : sl[k]).trim() !== '') { skipped++; return; }
+    sl[k] = v;
+    n++;
+  });
   save();
   closeModal('modal-bulk');
-  renderPhotoBook();
-  toast(`${proj.slots.length}枠に入れました`);
+  exitBulkMode();
+  toast(skipped ? `${n}枠に入れました（入力済み${skipped}枠はそのまま）` : `${n}枠に入れました`);
 }
 
 // ===== PHOTO INPUT =====

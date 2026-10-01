@@ -1,6 +1,6 @@
 // 写真帳 Service Worker
 // バージョンを変えると次回アクセス時にキャッシュが更新されます
-const CACHE_NAME = 'photobook-v24';
+const CACHE_NAME = 'photobook-v25';
 
 const PRECACHE = [
   './',
