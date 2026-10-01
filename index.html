@@ -154,6 +154,40 @@
   }
   .btn-add-project:active { background: var(--navy-light); }
 
+  /* ===== 写真の拡大表示 ===== */
+  .photo-viewer {
+    display: none; position: fixed; inset: 0; z-index: 500;
+    background: #000; touch-action: none;
+  }
+  .photo-viewer.open { display: block; }
+  .photo-viewer-img {
+    position: absolute; left: 0; top: 0;
+    width: 100%; height: 100%;
+    object-fit: contain;
+    transform-origin: 0 0;
+    will-change: transform;
+  }
+  .photo-viewer-bar {
+    position: absolute; left: 0; right: 0; top: 0; z-index: 2;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 14px;
+    background: linear-gradient(rgba(0,0,0,0.65), rgba(0,0,0,0));
+    color: #fff; font-size: 13px; font-weight: 700;
+    pointer-events: none;
+  }
+  .photo-viewer-bar button {
+    pointer-events: auto;
+    background: rgba(255,255,255,0.18); color: #fff;
+    border: none; border-radius: 9px; padding: 9px 14px;
+    font-size: 14px; font-weight: 700; cursor: pointer;
+    font-family: 'Noto Sans JP', sans-serif;
+  }
+  .photo-viewer-hint {
+    position: absolute; left: 0; right: 0; bottom: 18px; z-index: 2;
+    text-align: center; color: rgba(255,255,255,0.75); font-size: 12px;
+    pointer-events: none;
+  }
+
   .storage-bar { margin-bottom: 14px; }
   .storage-text { font-size: 11px; color: var(--text-sub); margin-bottom: 5px; font-weight: 500; }
   .storage-track {
@@ -315,6 +349,19 @@
     transition: border-color 0.2s;
   }
   .info-input:focus { border-color: var(--blue-light); background: white; }
+  /* iPhoneの日付欄は中身の幅が勝手に広がって右が切れるため、枠に収める */
+  .info-input[type="date"] {
+    min-width: 0; max-width: 100%;
+    -webkit-appearance: none; appearance: none;
+    display: block; padding: 6px 6px;
+  }
+  .info-input[type="date"]::-webkit-date-and-time-value { text-align: left; margin: 0; }
+  .info-input[type="date"]::-webkit-calendar-picker-indicator { margin-left: 0; padding: 0; }
+  .modal-input[type="date"] {
+    min-width: 0; max-width: 100%;
+    -webkit-appearance: none; appearance: none; display: block;
+  }
+  .modal-input[type="date"]::-webkit-date-and-time-value { text-align: left; margin: 0; }
   .info-textarea { min-height: 44px; line-height: 1.5; resize: vertical; display: block; }
 
   .btn-camera {
@@ -930,6 +977,9 @@
     <div style="display:flex;gap:10px;margin-bottom:20px;">
       <button class="btn-template-action" onclick="showExcelMenu()">📊 Excelから読み込む／雛形を書き出す</button>
     </div>
+    <div style="display:flex;gap:10px;margin-bottom:20px;">
+      <button class="btn-template-action" onclick="showBackupMenu()">💾 バックアップ（書き出し／戻す）</button>
+    </div>
     <div class="section-label" style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
       <span id="home-list-title">工事一覧</span>
       <span style="display:flex;align-items:center;gap:8px;">
@@ -1007,14 +1057,13 @@
   </div>
 
   <div class="photobook-pad" id="photobook-pad">
-    <div class="print-header" id="print-title"></div>
-    <div class="print-sub" id="print-sub"></div>
     <div class="photo-grid" id="photo-grid"></div>
   </div>
 
   <div class="reorder-hint no-print">移動先へドラッグ。青い帯の位置に入ります</div>
   <div class="bottom-bar no-print normal-bar">
     <button class="btn-secondary" onclick="showAddSlotMenu()">＋ 写真枠</button>
+    <button class="btn-icon-only" onclick="showBulkInput()" title="まとめて入力">📋</button>
     <button class="btn-icon-only" id="btn-reorder-mode" onclick="toggleReorderMode()" title="並べ替え">⇅</button>
     <button class="btn-delete-mode" id="btn-delete-mode" onclick="toggleDeleteMode()">🗑 削除</button>
     <button class="btn-primary" onclick="showSaveMenu()">💾 保存</button>
@@ -1022,6 +1071,126 @@
   <div class="delete-bar no-print">
     <button class="btn-cancel-delete" onclick="toggleDeleteMode()">キャンセル</button>
     <button class="btn-exec-delete" id="btn-exec-delete" onclick="execDelete()" disabled>削除する（0件）</button>
+  </div>
+</div>
+
+<!-- ===== CONTINUOUS SHOOT ===== -->
+<div class="modal-overlay" id="modal-continue">
+  <div class="modal">
+    <div class="modal-title">📸 連続撮影</div>
+    <p style="font-size:13px;color:var(--text-sub);margin:0 0 16px;line-height:1.6;">写真を追加しました。続けて撮りますか？</p>
+    <div class="save-option" onclick="nextContinuousShot()">
+      <span class="save-option-icon">📷</span>
+      <div class="save-option-text">
+        <strong>続けて撮る</strong>
+        <span>次の枠を用意してカメラを開きます</span>
+      </div>
+    </div>
+    <button class="modal-btn-ok" style="width:100%;margin-top:8px" onclick="endContinuous()">✔ 終了する</button>
+  </div>
+</div>
+
+<!-- ===== BOARD FIELD EDIT ===== -->
+<div class="modal-overlay" id="modal-board-field">
+  <div class="modal">
+    <div class="modal-title" id="board-field-title">黒板を直す</div>
+    <div class="modal-field">
+      <input class="modal-input" id="board-field-text" type="text">
+      <textarea class="modal-input" id="board-field-area" rows="3" style="display:none;font-family:'Noto Sans JP',sans-serif;"></textarea>
+      <input class="modal-input" id="board-field-date" type="date" style="display:none;">
+      <select class="modal-select" id="board-field-type" style="display:none;"></select>
+    </div>
+    <div class="modal-btns">
+      <button class="modal-btn-cancel" onclick="closeModal('modal-board-field')">キャンセル</button>
+      <button class="modal-btn-ok" onclick="execBoardField()">反映する</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== BULK INPUT ===== -->
+<div class="modal-overlay" id="modal-bulk">
+  <div class="modal">
+    <div class="modal-title">📋 まとめて入力</div>
+    <div class="modal-field">
+      <div class="modal-label">どの項目を</div>
+      <select class="modal-select" id="bulk-key" onchange="onBulkKeyChange()">
+        <option value="location">場所</option>
+        <option value="type">種別</option>
+        <option value="date">撮影日</option>
+        <option value="name">工事名</option>
+        <option value="memo">会社名</option>
+        <option value="work">作業名</option>
+      </select>
+    </div>
+    <div class="modal-field">
+      <div class="modal-label">入れる内容</div>
+      <input class="modal-input" id="bulk-value" type="text">
+    </div>
+    <div style="font-size:11px;color:var(--text-sub);margin-bottom:14px;line-height:1.6;">
+      この写真帳の<span id="bulk-count">0</span>枠すべてに入ります（今の内容は上書きされます）
+    </div>
+    <div class="modal-btns">
+      <button class="modal-btn-cancel" onclick="closeModal('modal-bulk')">キャンセル</button>
+      <button class="modal-btn-ok" onclick="execBulk()">全部に入れる</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== PHOTO VIEWER ===== -->
+<div class="photo-viewer" id="photo-viewer">
+  <img class="photo-viewer-img" id="photo-viewer-img" alt="写真">
+  <div class="photo-viewer-bar">
+    <span id="photo-viewer-title">写真</span>
+    <button onclick="closePhotoViewer()">✕ 閉じる</button>
+  </div>
+  <div class="photo-viewer-hint">2本指で拡大・ダブルタップで切り替え</div>
+</div>
+
+<!-- ===== BACKUP MENU ===== -->
+<div class="modal-overlay" id="modal-backup">
+  <div class="modal">
+    <div class="modal-title">💾 バックアップ</div>
+    <div class="save-option" onclick="exportBackup()">
+      <span class="save-option-icon">📤</span>
+      <div class="save-option-text">
+        <strong>ファイルに書き出す</strong>
+        <span>写真ごと1つのファイルにまとめて保存します</span>
+      </div>
+    </div>
+    <div class="save-option" onclick="triggerBackupImport()">
+      <span class="save-option-icon">📥</span>
+      <div class="save-option-text">
+        <strong>ファイルから戻す</strong>
+        <span>書き出したファイルを読み込みます</span>
+      </div>
+    </div>
+    <button class="modal-btn-cancel" style="width:100%;margin-top:8px" onclick="closeModal('modal-backup')">キャンセル</button>
+  </div>
+</div>
+
+<!-- ===== BACKUP IMPORT CONFIRM ===== -->
+<div class="modal-overlay" id="modal-backup-import">
+  <div class="modal">
+    <div class="modal-title">読み込み方法を選ぶ</div>
+    <div class="modal-field">
+      <div class="modal-label">ファイルの中身</div>
+      <div id="backup-summary" style="font-size:12px;color:var(--text-sub);line-height:1.7;"></div>
+    </div>
+    <div class="save-option" onclick="execImportBackup('add')">
+      <span class="save-option-icon">➕</span>
+      <div class="save-option-text">
+        <strong>今のデータに追加する</strong>
+        <span>今ある写真帳はそのまま残ります</span>
+      </div>
+    </div>
+    <div class="save-option" onclick="execImportBackup('replace')">
+      <span class="save-option-icon">♻️</span>
+      <div class="save-option-text">
+        <strong>今のデータを置き換える</strong>
+        <span>⚠️ 今ある写真帳はすべて消えます</span>
+      </div>
+    </div>
+    <button class="modal-btn-cancel" style="width:100%;margin-top:8px" onclick="closeModal('modal-backup-import')">キャンセル</button>
   </div>
 </div>
 
@@ -1166,6 +1335,21 @@
       <input class="modal-input" id="input-title" type="text" placeholder="例：○○ビル定期点検_9月">
       <div style="font-size:11px;color:var(--text-sub);margin-top:5px;">工事一覧と見出しに表示されます</div>
     </div>
+    <div class="modal-field">
+      <div class="modal-label">種別</div>
+      <select class="modal-select" id="input-type" onchange="toggleOtherInput('input-type-other', this.value)">
+        <option value="">（あとで決める）</option>
+        <option>2週間点検</option>
+        <option>1ヶ月点検</option>
+        <option>3ヶ月点検</option>
+        <option>6ヶ月点検</option>
+        <option>年次点検</option>
+        <option>2年点検</option>
+        <option>その他</option>
+      </select>
+      <input class="modal-input" id="input-type-other" type="text" placeholder="種別を入力" style="margin-top:8px;display:none;">
+      <div style="font-size:11px;color:var(--text-sub);margin-top:5px;">追加する写真枠の「種別」に入ります</div>
+    </div>
     <div class="modal-btns">
       <button class="modal-btn-cancel" onclick="closeModal('modal-add')">キャンセル</button>
       <button class="modal-btn-ok" onclick="addProject()">追加する</button>
@@ -1178,11 +1362,18 @@
   <div class="modal">
     <div class="modal-title">写真を追加</div>
     <div class="source-btns">
-      <button class="source-btn" onclick="triggerCamera()">
+      <button class="source-btn" onclick="triggerCamera(false)">
         <span class="source-btn-icon">📷</span>
         <div class="source-btn-text">
           <strong>カメラで撮影</strong>
           <span>今すぐ写真を撮る</span>
+        </div>
+      </button>
+      <button class="source-btn" onclick="triggerCamera(true)">
+        <span class="source-btn-icon">📸</span>
+        <div class="source-btn-text">
+          <strong>連続で撮影</strong>
+          <span>枠を自動で足しながら続けて撮る</span>
         </div>
       </button>
       <button class="source-btn" onclick="triggerAlbum()">
@@ -1190,6 +1381,13 @@
         <div class="source-btn-text">
           <strong>アルバムから選ぶ</strong>
           <span>保存済みの写真を選択</span>
+        </div>
+      </button>
+      <button class="source-btn" id="btn-view-photo" onclick="viewCurrentPhoto()" style="display:none;">
+        <span class="source-btn-icon">🔍</span>
+        <div class="source-btn-text">
+          <strong>大きく見る</strong>
+          <span>写真を全画面で確認する</span>
         </div>
       </button>
       <button class="source-btn" onclick="createBoard()">
@@ -1210,6 +1408,7 @@
 <input type="file" id="file-camera" accept="image/*" capture="environment">
 <input type="file" id="file-album" accept="image/*" multiple>
 <input type="file" id="file-excel" accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+<input type="file" id="file-backup" accept=".json,application/json">
 
 <!-- ===== SAVE MENU MODAL ===== -->
 <div class="modal-overlay" id="modal-save">
@@ -1582,6 +1781,9 @@ function toast(msg) {
 // ===== MODALS =====
 function showAddProject() {
   document.getElementById('input-title').value = '';
+  document.getElementById('input-type').value = '';
+  document.getElementById('input-type-other').value = '';
+  document.getElementById('input-type-other').style.display = 'none';
   document.getElementById('modal-add').classList.add('open');
   setTimeout(() => document.getElementById('input-title').focus(), 300);
 }
@@ -1602,13 +1804,16 @@ function closeModal(id) { document.getElementById(id).classList.remove('open'); 
 function addProject() {
   const title = document.getElementById('input-title').value.trim();
   if (!title) { toast('⚠️ 写真帳の名前を入力してください'); return; }
+  const typeRaw = document.getElementById('input-type').value;
+  const typeOther = document.getElementById('input-type-other').value.trim();
+  const type = typeRaw === 'その他' ? (typeOther || 'その他') : typeRaw;
   // 写真枠は作らない。使う人が「＋ 写真枠」から必要な分だけ足す
   const proj = {
     id: uid(),
     title: title,
     name: defaults.projName || title,   // 写真枠に入る工事名（初期設定があればそれを使う）
     location: '',
-    type: '',
+    type: type,
     person: today(),
     slots: [],
     createdAt: today()
@@ -1791,8 +1996,6 @@ function openProject(id) {
   const proj = projects.find(p => p.id === id);
   projectSnapshot = JSON.stringify(proj, stripPhotos);
   document.getElementById('pb-title').value = projLabel(proj);
-  document.getElementById('print-title').textContent = '写　真　帳';
-  document.getElementById('print-sub').textContent = `工事名：${proj.name}　種別：${proj.type}${proj.person ? '　担当：' + proj.person : ''}`;
   document.getElementById('screen-home').classList.remove('active');
   document.getElementById('screen-photobook').classList.add('active');
   renderPhotoBook();
@@ -1863,6 +2066,8 @@ function renderPhotoBook() {
     const dateVal = slot.date ? slot.date.replace(/\//g,'-') : '';
     const memoVal = escAttr(slot.memo || '');
     const workTxt = escHtml(slot.work || '');
+    // 一覧にない種別（自由入力）のときは「その他」を選んだ状態にする
+    const typeIsOther = !!slotType && !['2週間点検','1ヶ月点検','3ヶ月点検','6ヶ月点検','年次点検','2年点検'].includes(slotType);
     const nameVal = escAttr(slotName);
     const locationVal = escAttr(slotLocation);
     return `
@@ -1897,9 +2102,11 @@ function renderPhotoBook() {
         <div class="info-row">
           <div class="info-label">種別</div>
           <select class="info-input" data-slot="${i}" data-key="type" data-other-target="type-other-${i}">
-            ${['2週間点検','1ヶ月点検','3ヶ月点検','6ヶ月点検','年次点検','2年点検','その他'].map(t =>
+            <option value="" ${!slotType ? 'selected' : ''}>（未設定）</option>
+            ${['2週間点検','1ヶ月点検','3ヶ月点検','6ヶ月点検','年次点検','2年点検'].map(t =>
               `<option value="${escAttr(t)}" ${slotType === t ? 'selected' : ''}>${escHtml(t)}</option>`
             ).join('')}
+            <option value="その他" ${typeIsOther ? 'selected' : ''}>その他</option>
           </select>
           <input class="info-input" id="type-other-${i}" type="text" placeholder="種別を入力" data-slot="${i}" data-key="type"
             style="margin-top:4px;${slotType === 'その他' || (slotType && !['2週間点検','1ヶ月点検','3ヶ月点検','6ヶ月点検','年次点検','2年点検','その他'].includes(slotType)) ? '' : 'display:none;'}"
@@ -2758,7 +2965,7 @@ function initBoardInteraction(el) {
   layoutBoard(el);
   const idx = parseInt(el.dataset.boardSlot);
   const area = el.parentElement; // .photo-area
-  let mode = null, startX = 0, startY = 0, startL = 0, startT = 0, startW = 0;
+  let mode = null, startX = 0, startY = 0, startL = 0, startT = 0, startW = 0, tapRow = -1;
 
   el.addEventListener('click', e => e.stopPropagation());
 
@@ -2767,6 +2974,11 @@ function initBoardInteraction(el) {
     e.preventDefault();
     e.stopPropagation();
     mode = e.target.classList.contains('board-resize') ? 'resize' : 'move';
+    // 動かさずに離したときは「その行を直す」とみなす
+    const td = e.target.closest ? e.target.closest('td') : null;
+    const tr = td ? td.parentElement : null;
+    const vtd = tr ? tr.querySelector('.board-value') : null;
+    tapRow = (mode === 'move' && vtd) ? parseInt(vtd.dataset.boardRow) : -1;
     startX = e.clientX; startY = e.clientY;
     startL = el.offsetLeft; startT = el.offsetTop; startW = el.offsetWidth;
     try { el.setPointerCapture(e.pointerId); } catch (err) { /* 古い環境では失敗しても動作継続 */ }
@@ -2795,9 +3007,12 @@ function initBoardInteraction(el) {
     }
   });
 
-  const endDrag = () => {
+  const endDrag = e => {
     if (!mode) return;
+    const wasTap = tapRow >= 0 && e && Math.abs(e.clientX - startX) < 6 && Math.abs(e.clientY - startY) < 6;
     mode = null;
+    if (wasTap) { const r = tapRow; tapRow = -1; openBoardFieldEditor(idx, r); return; }
+    tapRow = -1;
     const proj = projects.find(p => p.id === currentProjectId);
     const slot = proj.slots[idx];
     const b = slot && slot.board;
@@ -2820,15 +3035,314 @@ function initBoardInteraction(el) {
   el.addEventListener('pointercancel', endDrag);
 }
 
+// ===== 黒板の行をその場で直す =====
+const BOARD_KEYS = ['name', 'work', 'location', 'type', 'date', 'memo'];
+const TYPE_OPTIONS = ['2週間点検', '1ヶ月点検', '3ヶ月点検', '6ヶ月点検', '年次点検', '2年点検'];
+let boardFieldSlot = -1, boardFieldRow = -1;
+
+function openBoardFieldEditor(slotIndex, row) {
+  const proj = projects.find(p => p.id === currentProjectId);
+  const slot = proj && proj.slots[slotIndex];
+  if (!slot || row < 0 || row > 5) return;
+  boardFieldSlot = slotIndex; boardFieldRow = row;
+  const key = BOARD_KEYS[row];
+  const val = String(boardValues(slot, proj)[row] || '');
+  document.getElementById('board-field-title').textContent = BOARD_LABELS[row] + 'を直す';
+  ['board-field-text', 'board-field-area', 'board-field-date', 'board-field-type']
+    .forEach(id => { document.getElementById(id).style.display = 'none'; });
+  if (key === 'work') {
+    const el = document.getElementById('board-field-area');
+    el.style.display = 'block'; el.value = val;
+  } else if (key === 'date') {
+    const el = document.getElementById('board-field-date');
+    el.style.display = 'block'; el.value = val.replace(/\//g, '-');
+  } else if (key === 'type') {
+    const el = document.getElementById('board-field-type');
+    const opts = TYPE_OPTIONS.slice();
+    if (val && opts.indexOf(val) === -1) opts.push(val);
+    el.innerHTML = '<option value="">（なし）</option>' +
+      opts.map(t => `<option value="${escAttr(t)}">${escHtml(t)}</option>`).join('');
+    el.style.display = 'block'; el.value = val;
+  } else {
+    const el = document.getElementById('board-field-text');
+    el.style.display = 'block'; el.value = val;
+  }
+  document.getElementById('modal-board-field').classList.add('open');
+}
+
+function execBoardField() {
+  if (boardFieldRow < 0) return;
+  const key = BOARD_KEYS[boardFieldRow];
+  let v;
+  if (key === 'work') v = document.getElementById('board-field-area').value;
+  else if (key === 'date') v = document.getElementById('board-field-date').value.replace(/-/g, '/');
+  else if (key === 'type') v = document.getElementById('board-field-type').value;
+  else v = document.getElementById('board-field-text').value;
+  updateSlot(boardFieldSlot, key, v);
+  boardFieldSlot = -1; boardFieldRow = -1;
+  closeModal('modal-board-field');
+  renderPhotoBook();
+  toast('黒板を更新しました');
+}
+
+// ===== まとめて入力 =====
+function showBulkInput() {
+  const proj = projects.find(p => p.id === currentProjectId);
+  if (!proj || !proj.slots.length) { toast('⚠️ 写真枠がありません'); return; }
+  document.getElementById('bulk-count').textContent = proj.slots.length;
+  onBulkKeyChange();
+  document.getElementById('modal-bulk').classList.add('open');
+}
+
+function onBulkKeyChange() {
+  const k = document.getElementById('bulk-key').value;
+  const el = document.getElementById('bulk-value');
+  el.type = (k === 'date') ? 'date' : 'text';
+  el.value = '';
+}
+
+function execBulk() {
+  const proj = projects.find(p => p.id === currentProjectId);
+  if (!proj) return;
+  const k = document.getElementById('bulk-key').value;
+  let v = document.getElementById('bulk-value').value;
+  if (k === 'date') v = v.replace(/-/g, '/');
+  proj.slots.forEach(sl => { sl[k] = v; });
+  save();
+  closeModal('modal-bulk');
+  renderPhotoBook();
+  toast(`${proj.slots.length}枠に入れました`);
+}
+
 // ===== PHOTO INPUT =====
 function choosePhoto(index) {
   currentSlotIndex = index;
+  const proj = projects.find(p => p.id === currentProjectId);
+  const slot = proj && proj.slots[index];
+  document.getElementById('btn-view-photo').style.display = (slot && slot.photo) ? '' : 'none';
   document.getElementById('modal-source').classList.add('open');
 }
 
-function triggerCamera() {
+// ===== 写真の拡大表示 =====
+let viewerScale = 1, viewerX = 0, viewerY = 0;
+const viewerPointers = new Map();
+let viewerPinchDist = 0, viewerPinchMid = null, viewerLastTap = 0;
+
+function viewCurrentPhoto() {
+  closeModal('modal-source');
+  const proj = projects.find(p => p.id === currentProjectId);
+  const slot = proj && proj.slots[currentSlotIndex];
+  if (!slot || !slot.photo) return;
+  document.getElementById('photo-viewer-img').src = slot.photo;
+  document.getElementById('photo-viewer-title').textContent =
+    `写真${currentSlotIndex + 1}　${String(slot.work || '').split('\n')[0]}`;
+  viewerScale = 1; viewerX = 0; viewerY = 0;
+  applyViewerTransform();
+  document.getElementById('photo-viewer').classList.add('open');
+}
+
+function closePhotoViewer() {
+  document.getElementById('photo-viewer').classList.remove('open');
+  viewerPointers.clear();
+}
+
+function applyViewerTransform() {
+  document.getElementById('photo-viewer-img').style.transform =
+    `translate(${viewerX}px, ${viewerY}px) scale(${viewerScale})`;
+}
+
+// 拡大しても写真が画面から外れすぎないように寄せる
+function clampViewer() {
+  const el = document.getElementById('photo-viewer');
+  const w = el.clientWidth, h = el.clientHeight;
+  const limX = Math.max(0, (w * viewerScale - w) / 2 + w * 0.15);
+  const limY = Math.max(0, (h * viewerScale - h) / 2 + h * 0.15);
+  viewerX = Math.min(limX, Math.max(-limX, viewerX));
+  viewerY = Math.min(limY, Math.max(-limY, viewerY));
+}
+
+(function initPhotoViewer() {
+  const el = document.getElementById('photo-viewer');
+  if (!el) return;
+  const mid = () => {
+    const pts = Array.from(viewerPointers.values());
+    return { x: (pts[0].x + pts[1].x) / 2, y: (pts[0].y + pts[1].y) / 2 };
+  };
+  const dist = () => {
+    const pts = Array.from(viewerPointers.values());
+    return Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+  };
+
+  el.addEventListener('pointerdown', e => {
+    if (e.target.tagName === 'BUTTON') return;
+    e.preventDefault();
+    viewerPointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    try { el.setPointerCapture(e.pointerId); } catch (err) { /* 古い環境でも継続 */ }
+    if (viewerPointers.size === 2) { viewerPinchDist = dist(); viewerPinchMid = mid(); }
+    if (viewerPointers.size === 1) {
+      const now = Date.now();
+      if (now - viewerLastTap < 300) {       // ダブルタップで拡大／等倍
+        viewerScale = viewerScale > 1.2 ? 1 : 2.5;
+        viewerX = 0; viewerY = 0;
+        clampViewer(); applyViewerTransform();
+      }
+      viewerLastTap = now;
+    }
+  });
+
+  el.addEventListener('pointermove', e => {
+    if (!viewerPointers.has(e.pointerId)) return;
+    e.preventDefault();
+    const prev = viewerPointers.get(e.pointerId);
+    viewerPointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (viewerPointers.size === 2) {
+      const d = dist();
+      if (viewerPinchDist > 0) {
+        viewerScale = Math.min(6, Math.max(1, viewerScale * (d / viewerPinchDist)));
+      }
+      viewerPinchDist = d;
+      const m = mid();
+      if (viewerPinchMid) { viewerX += m.x - viewerPinchMid.x; viewerY += m.y - viewerPinchMid.y; }
+      viewerPinchMid = m;
+    } else if (viewerPointers.size === 1 && viewerScale > 1) {
+      viewerX += e.clientX - prev.x;
+      viewerY += e.clientY - prev.y;
+    }
+    clampViewer(); applyViewerTransform();
+  });
+
+  const up = e => {
+    viewerPointers.delete(e.pointerId);
+    if (viewerPointers.size < 2) { viewerPinchDist = 0; viewerPinchMid = null; }
+    if (viewerScale <= 1.02) { viewerScale = 1; viewerX = 0; viewerY = 0; applyViewerTransform(); }
+  };
+  el.addEventListener('pointerup', up);
+  el.addEventListener('pointercancel', up);
+})();
+
+// ===== バックアップ =====
+let backupData = null;
+
+function showBackupMenu() { document.getElementById('modal-backup').classList.add('open'); }
+function triggerBackupImport() { closeModal('modal-backup'); document.getElementById('file-backup').click(); }
+
+function exportBackup() {
+  closeModal('modal-backup');
+  try {
+    const data = {
+      appVersion: 1,
+      exportedAt: today(),
+      defaults: defaults,
+      templates: templates,
+      projects: projects            // 写真データも含める
+    };
+    const json = JSON.stringify(data);
+    const mb = (json.length / 1048576).toFixed(1);
+    downloadBlob(new Blob([json], { type: 'application/json' }),
+      `写真帳バックアップ_${today().replace(/\//g, '-')}.json`);
+    toast(`書き出しました（約${mb}MB）`);
+  } catch (err) {
+    toast('⚠️ 書き出せませんでした：' + (err.message || ''));
+  }
+}
+
+document.getElementById('file-backup').addEventListener('change', e => {
+  const f = e.target.files && e.target.files[0];
+  e.target.value = '';
+  if (!f) return;
+  const r = new FileReader();
+  r.onload = ev => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      if (!data || !Array.isArray(data.projects)) throw new Error('写真帳のバックアップではありません');
+      backupData = data;
+      let photos = 0;
+      data.projects.forEach(p => (p.slots || []).forEach(sl => { if (sl && sl.photo) photos++; }));
+      document.getElementById('backup-summary').innerHTML =
+        `書き出した日：${escHtml(data.exportedAt || '不明')}<br>` +
+        `写真帳 ${data.projects.length} 件／写真 ${photos} 枚<br>` +
+        `テンプレート ${(data.templates || []).length} 件`;
+      document.getElementById('modal-backup-import').classList.add('open');
+    } catch (err) {
+      toast('⚠️ 読み込めませんでした：' + (err.message || ''));
+    }
+  };
+  r.readAsText(f);
+});
+
+function execImportBackup(mode) {
+  closeModal('modal-backup-import');
+  const data = backupData;
+  if (!data) return;
+  const incoming = data.projects.filter(p => p && typeof p === 'object');
+  incoming.forEach(p => {
+    p.id = uid();                                   // 今のデータとIDがぶつからないようにする
+    if (!Array.isArray(p.slots)) p.slots = [];
+    p.slots.forEach(sl => { sl.id = uid(); delete sl.photoId; });
+  });
+  projects = (mode === 'replace') ? incoming : incoming.concat(projects);
+
+  if (Array.isArray(data.templates)) {
+    const t = data.templates.filter(x => x && typeof x === 'object')
+      .map(x => Object.assign({}, x, { id: uid() }));
+    templates = (mode === 'replace') ? t : t.concat(templates);
+    saveTemplates();
+  }
+  if (mode === 'replace' && data.defaults && typeof data.defaults === 'object') {
+    defaults = data.defaults;
+    safeSetItem('photobook_defaults', JSON.stringify(defaults));
+  }
+  backupData = null;
+  save();
+  reimportPhotos().then(() => {
+    gcPhotos();
+    renderHome();
+    toast(`${incoming.length}件の写真帳を読み込みました`);
+  });
+}
+
+// 読み込んだ写真をIndexedDBへ入れ直す
+function reimportPhotos() {
+  if (!usingIdb) return Promise.resolve();
+  const tasks = [];
+  projects.forEach(p => p.slots.forEach(sl => {
+    if (sl.photo && !sl.photoId) {
+      const pid = uid(), bytes = sl.photo.length;
+      tasks.push(idbPut(pid, sl.photo).then(() => { sl.photoId = pid; sl.photoBytes = bytes; }).catch(() => {}));
+    }
+  }));
+  return Promise.all(tasks).then(() => save());
+}
+
+let continuousMode = false;
+
+function triggerCamera(cont) {
+  continuousMode = !!cont;
   closeModal('modal-source');
   document.getElementById('file-camera').click();
+}
+
+// 次の空き枠（無ければ新しく作る）を用意してカメラを開く。
+// ボタンを押した流れの中で開くので、iPhoneでもカメラが起動する。
+function nextContinuousShot() {
+  closeModal('modal-continue');
+  const proj = projects.find(p => p.id === currentProjectId);
+  if (!proj) return;
+  let next = proj.slots.findIndex((sl, i) => i > currentSlotIndex && !sl.photo);
+  if (next === -1) {
+    proj.slots.push({ id: uid(), photo: null, date: today(), memo: defaults.company || '', work: '',
+                      name: proj.name, location: proj.location || '', type: proj.type });
+    next = proj.slots.length - 1;
+    save();
+  }
+  currentSlotIndex = next;
+  document.getElementById('file-camera').click();
+}
+
+function endContinuous() {
+  continuousMode = false;
+  closeModal('modal-continue');
+  renderPhotoBook();
 }
 
 function triggerAlbum() {
@@ -2881,7 +3395,11 @@ function handleFile(file, slotId) {
       }
       save();
       renderPhotoBook();
-      toast('写真を追加しました');
+      if (continuousMode) {
+        document.getElementById('modal-continue').classList.add('open');
+      } else {
+        toast('写真を追加しました');
+      }
     };
     img.src = e.target.result;
   };
